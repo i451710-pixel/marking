@@ -163,21 +163,17 @@ input:disabled,input[readonly]{opacity:.7; cursor:default; background:var(--soft
 .manage-sec h3{ font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
 .manage-sec h3 .hint{font-weight:400; letter-spacing:0; text-transform:none; margin-left:auto}
 .tag-list{list-style:none; margin:0 0 2px; padding:0; display:flex; flex-wrap:wrap; gap:6px; min-height:6px}
-.tag-list li{ display:flex; align-items:center; gap:1px; background:var(--soft); border:1px solid var(--border); border-radius:8px; padding:2px 3px 2px 9px; font-size:12px; font-weight:600; letter-spacing:.02em; max-width:100%; cursor:grab; user-select:none; }
+.tag-list li{ display:flex; align-items:center; gap:1px; background:var(--soft); border:1px solid var(--border); border-radius:8px; padding:2px 3px 2px 9px; font-size:12px; font-weight:600; letter-spacing:.02em; max-width:100%; user-select:none; }
 .tag-list li span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .tag-list li.empty-tag{border-style:dashed; color:var(--muted); font-weight:400; padding:4px 10px; background:transparent; cursor:default;}
-.tag-list li.dragging{opacity:.35; outline:1.5px dashed var(--primary)}
 .cat-manage-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
 .cat-group{ display:flex; flex-direction:column; border:1px solid var(--border); border-radius:9px; padding:5px 7px; background:var(--soft); }
-.cat-group.dragging{opacity:.35; outline:1.5px dashed var(--primary)}
-.cat-head{ display:flex; align-items:center; gap:4px; font-size:12px; font-weight:600; cursor:grab; user-select:none; padding:1px 0; }
-.cat-head .drag-handle{color:var(--muted); font-size:10px; letter-spacing:-2px; cursor:grab}
+.cat-head{ display:flex; align-items:center; gap:4px; font-size:12px; font-weight:600; user-select:none; padding:1px 0; }
 .cat-head .cat-name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .mini-btn{ border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; font-size:11px; padding:0 5px; border-radius:5px; line-height:1.6; font-family:inherit; }
 .mini-btn:hover{background:var(--soft); border-color:var(--primary)}
 .sub-list{ list-style:none; margin:4px 0 0; padding:0 0 0 16px; display:flex; flex-wrap:wrap; gap:4px; min-height:4px; }
-.sub-list li{ display:flex; align-items:center; gap:1px; background:var(--card); border:1px solid var(--border); border-radius:6px; padding:1px 3px 1px 8px; font-size:11px; font-weight:500; cursor:grab; user-select:none; }
-.sub-list li.dragging{opacity:.35; outline:1.5px dashed var(--primary)}
+.sub-list li{ display:flex; align-items:center; gap:1px; background:var(--card); border:1px solid var(--border); border-radius:6px; padding:1px 3px 1px 8px; font-size:11px; font-weight:500; user-select:none; }
 .cat-empty{color:var(--muted); font-size:12px; padding:4px 2px}
 .add-row{display:flex; gap:6px; margin-top:8px}
 .add-row input{flex:1; min-width:0; padding:6px 9px; font-size:13px}
@@ -213,87 +209,62 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 .settle-detail-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; margin-top: 10px; background: var(--primary); color: var(--on-primary); border-radius: 10px; font-weight: 700; }
 .settle-detail-empty { color: var(--muted); text-align: center; padding: 20px 0; font-size: 13px; }
 
+/* ===== 懸浮快速記帳 (FAB) ===== */
+#fabAdd {
+  position: fixed; right: 20px; bottom: 80px; width: 56px; height: 56px;
+  border-radius: 50%; background: var(--primary); color: var(--on-primary);
+  font-size: 32px; font-weight: 300; border: none; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  display: flex; align-items: center; justify-content: center; z-index: 99;
+  cursor: pointer; transition: transform 0.2s, opacity 0.2s;
+}
+#fabAdd:active { transform: scale(0.9); }
+@media (min-width: 769px) {
+  #fabAdd { display: none !important; } /* 電腦端隱藏 */
+}
+
 /* ===== 手機適配 (<768px) ===== */
 .mobile-book-bar { display: none; }
 @media (max-width: 768px){
   #zoom-root{ display:block; height:auto; min-height:100vh; }
   .app{ flex-direction: column; height:auto; }
   .sidebar{ width:100%; flex:none; height:auto; position:sticky; top:0; border-right:none; border-bottom:1px solid var(--border); z-index:60; }
-  
-  /* 隱藏桌面端元素，顯示手機端元素 */
   .desktop-only { display: none !important; }
   .mobile-book-bar { display: flex; flex: 1; align-items: center; gap: 8px; margin-left: 10px; }
-  
   .sidebar-top{ flex-direction: row; align-items: center; padding: 8px 12px; gap: 0; }
   .brand{ flex:none; font-size:16px; white-space: nowrap; }
-  .brand-text { display: none; } /* 手機上只留圖標節省空間 */
+  .brand-text { display: none; }
   
-  /* 下拉選單樣式 */
   .mobile-book-bar select {
-    flex: 1;
-    padding: 6px 10px;
-    font-size: 14px;
-    font-weight: 600;
-    border-radius: 8px;
-    background: var(--soft);
-    border: 1px solid var(--border);
-    color: var(--primary);
-    text-align: center;
-    text-align-last: center;
-    outline: none;
+    flex: 1; padding: 6px 10px; font-size: 14px; font-weight: 600;
+    border-radius: 8px; background: var(--soft); border: 1px solid var(--border);
+    color: var(--primary); text-align: center; text-align-last: center; outline: none;
   }
   .mobile-book-bar .icon-btn {
-    font-size: 18px;
-    padding: 4px 10px;
-    background: var(--soft);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    line-height: 1.2;
+    font-size: 18px; padding: 4px 10px; background: var(--soft);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text); line-height: 1.2;
   }
 
   .sidebar-bottom{ padding: 8px 10px; }
   .sidebar-bottom .btn{ padding: 8px; font-size:13px; }
-  .main-wrapper{ height:auto; overflow:visible; padding: 12px 12px 60px; }
+  .main-wrapper{ height:auto; overflow:visible; padding: 12px 12px 80px; /* 留出底部空間 */ }
   main{ flex-direction: column; }
   .col-left, .col-right{ flex:1 1 100%; width:100%; min-width:0; }
   .charts-grid{ grid-template-columns: 1fr; }
   .chart-container{ height: 240px; }
   .form-row .field{ flex: 1 1 100%; }
-    /* 強制限制各列寬度，防止長文字撐爆畫面 */
-  .tx-row {
-    grid-template-columns: 40px minmax(0, 1fr) 80px 22px 22px 24px;
-    gap: 4px;
-    padding: 10px 0;
-  }
   
-  .tx-main {
-    min-width: 0; /* 確保內部文字可以被正確截斷或換行 */
-  }
-
-  .tx-amt {
-    font-size: 13px;
-    max-width: 80px; /* 限制金額欄位最大寬度 */
-    min-width: 0;
-  }
-
-  .tx-amt-sub {
-    white-space: normal;
-    word-break: break-all; /* 允許外幣字串強制換行 */
-    text-align: right;
-    font-size: 10px;
-    line-height: 1.2;
-    color: var(--muted);
-  }
-
+  .tx-row { grid-template-columns: 40px minmax(0, 1fr) 80px 22px 22px 24px; gap: 4px; padding: 10px 0; }
+  .tx-main { min-width: 0; }
+  .tx-amt { font-size: 13px; max-width: 80px; min-width: 0; }
+  .tx-amt-sub { white-space: normal; word-break: break-all; text-align: right; font-size: 10px; line-height: 1.2; color: var(--muted); }
   .tx-date { font-size: 11px; }
-  .tx-date{ font-size: 11px; }
   .tx-month > summary { padding: 9px 4px; }
   .tx-month-meta { gap: 7px; font-size: 11px; }
   .modal-backdrop{ padding: 10px; }
   .modal{ padding: 14px; border-radius: 12px; }
   .modal-wide{ max-width: 100%; }
 }
+
 /* ===== 加載動畫 ===== */
 #loadingOverlay {
   position: fixed; inset: 0; background: var(--bg); z-index: 9999;
@@ -306,7 +277,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
   animation: spin 1s linear infinite; margin-bottom: 16px;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-}</style>
+</style>
 </head>
 <body>
 
@@ -315,19 +286,17 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
   <div style="color: var(--muted); font-size: 14px;">資料載入中…</div>
 </div>
 
+<button id="fabAdd" title="快速記帳">＋</button>
+
 <div id="zoom-root">
   <div class="app">
     <aside class="sidebar">
-            <div class="sidebar-top">
+      <div class="sidebar-top">
         <div class="brand">📒<span class="brand-text">記帳工具</span></div>
-
-        <!-- 手機端專用：帳簿下拉選單與新增按鈕 -->
         <div class="mobile-book-bar">
           <select id="mobileBookSelect"></select>
           <button class="icon-btn" id="btnMobileNewBook" title="新增帳簿">＋</button>
         </div>
-
-        <!-- 桌面端專用：原有列表 -->
         <section class="side-sec desktop-only">
           <h3>帳簿 <span class="hint">可拖動</span></h3>
           <div class="book-list" id="bookList"></div>
@@ -416,7 +385,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                 </div>
               </div>
 
-              <!-- 旅行帳簿：收支成員区 -->
               <div class="form-row" id="travelRow" hidden style="margin-top:10px">
                 <div class="field" style="flex:1 1 100%;">
                   <label style="display:flex; align-items:center; justify-content:space-between;">
@@ -448,7 +416,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                 </div>
               </div>
 
-              <!-- 普通帳簿轉帳 -->
               <div class="form-row" id="transferRow" style="margin-top:10px" hidden>
                 <div class="field" style="flex:1 1 100%">
                   <span class="hint">輸入「轉出金額、匯率、轉入金額」其中兩項，第三項會自動計算；同幣種匯率固定為 1。</span>
@@ -467,7 +434,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                 </div>
               </div>
 
-              <!-- 旅行帳簿轉帳（成員間借貸） -->
               <div class="form-row" id="travelTransferRow" style="margin-top:10px" hidden>
                 <div class="field" style="flex:1 1 100%">
                   <span class="hint">記錄成員間「借錢」。借出方會產生應收，借入方會產生應付。</span>
@@ -519,7 +485,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
             </form>
           </section>
 
-          <!-- 帳戶卡片（普通帳簿用，旅行帳簿隱藏） -->
           <section class="card" id="accountsCard" hidden>
             <div class="card-head"><h2>帳戶</h2></div>
             <div id="accList"></div>
@@ -554,6 +519,45 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
           </section>
         </div>
       </main>
+    </div>
+  </div>
+
+  <!-- 快速記帳 Modal -->
+  <div class="modal-backdrop" id="quickModal" hidden>
+    <div class="modal" style="max-width:400px" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h2>快速記帳</h2>
+        <button type="button" class="icon-btn" id="btnCloseQuick" title="關閉">✕</button>
+      </div>
+      <form id="quickForm" autocomplete="off">
+        <div class="form-row">
+          <div class="field wide" style="flex:1 1 100%;">
+            <label for="qAmount" style="font-size:14px; font-weight:600; color:var(--text);">金額</label>
+            <input type="number" id="qAmount" step="0.01" min="0" inputmode="decimal" placeholder="0.00" style="font-size:24px; text-align:right; padding:12px;" required>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+          <div class="field wide">
+            <label for="qCategory">分類</label>
+            <select id="qCategory" style="font-size:16px; padding:10px;"></select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+          <div class="field wide">
+            <label for="qAccount">帳戶</label>
+            <select id="qAccount" style="font-size:16px; padding:10px;"></select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+          <div class="field wide">
+            <label for="qNote">備註（選填）</label>
+            <input type="text" id="qNote" placeholder="選填">
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top:20px; border:none; padding:0;">
+          <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; font-size:16px;">儲存</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -747,7 +751,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 
 <script>
 /* =========================================================
-   記帳工具
+   記帳工具 v22 - 快速記帳 & 記憶分類 & 箭頭排序
    ========================================================= */
 
 const STORE_KEY = 'multicurrency_ledger_v3';
@@ -835,6 +839,13 @@ const eTravelTransferAmount = $('eTravelTransferAmount');
 const manageModal      = $('manageModal');
 const newBookModal     = $('newBookModal');
 const settleDetailModal = $('settleDetailModal');
+const quickModal       = $('quickModal');
+const quickForm        = $('quickForm');
+const qAmount          = $('qAmount');
+const qCategory        = $('qCategory');
+const qAccount         = $('qAccount');
+const qNote            = $('qNote');
+const fabAdd           = $('fabAdd');
 
 let fCurrentPayers = [{ name: '', amount: '' }];
 let fCurrentParticipants = [];
@@ -997,7 +1008,6 @@ async function gistPull(){
   const gistId = getGistId();
   if(!token || !gistId) return null;
   
-  // 背景下載，放寬到 10 秒
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
   
@@ -1157,9 +1167,13 @@ function render(){
   $('foreignDetails').hidden = false;
   $('eForeignDetails').hidden = false;
 
+  // 隱藏或顯示快速記帳懸浮按鈕 (旅行帳簿因為分帳太複雜，隱藏)
   if (isTravel) {
     if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
     if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; }
+    $('fabAdd').hidden = true;
+  } else {
+    $('fabAdd').hidden = false;
   }
 
   renderBookList();
@@ -1192,14 +1206,12 @@ function refreshMemberSelects(book){
 }
 
 function renderBookList(){
-  // 1. 渲染桌面端列表
   bookList.innerHTML = state.books.map(b => `
     <div class="book-item ${b.id === state.currentBookId ? 'active' : ''}" draggable="true" data-book-id="${b.id}">
       <span>${b.type === 'travel' ? '✈️ ' : ''}${esc(b.name || '未命名帳簿')}</span>
     </div>
   `).join('');
 
-  // 2. 渲染手機端下拉選單
   const mobileSel = $('mobileBookSelect');
   if (mobileSel) {
     mobileSel.innerHTML = state.books.map(b => `
@@ -1209,6 +1221,7 @@ function renderBookList(){
     `).join('');
   }
 }
+
 function renderAccounts(book){
   if(book.accounts.length === 0){ accList.innerHTML = '<div class="empty">尚未建立帳戶</div>'; return; }
   accList.innerHTML = book.accounts.map(a => {
@@ -1265,20 +1278,59 @@ function refreshOrigCurrencySelect(book){
 
 function refreshCategoryOptions(book){
   if(!book) return;
-  const prev = fCategory.value;
   const kind = fType.value === 'income' ? 'income' : 'expense';
   const groups = book.categories[kind] || [];
-  let html = '<option value="">（未分類）</option>';
-  for(const g of groups){
-    if(g.children.length === 0){ html += `<option value="${esc(g.name)}">${esc(g.name)}</option>`; }
-    else{
-      html += `<optgroup label="${esc(g.name)}">`;
-      for(const c of g.children){ const val = `${g.name} / ${c}`; html += `<option value="${esc(val)}">${esc(g.name)} / ${esc(c)}</option>`; }
-      html += '</optgroup>';
+
+  // 統計常用分類 (只算大分類)
+  const usageCount = {};
+  book.txs.forEach(t => {
+    if (t.type === kind && t.category) {
+      let mainCat = t.category.split('/')[0].trim();
+      if (mainCat) usageCount[mainCat] = (usageCount[mainCat] || 0) + 1;
     }
-  }
-  fCategory.innerHTML = html;
-  if([...fCategory.options].some(o => o.value === prev)) fCategory.value = prev;
+  });
+  const topCats = Object.keys(usageCount)
+    .sort((a, b) => usageCount[b] - usageCount[a])
+    .slice(0, 3);
+
+  const buildOptions = (targetSel) => {
+    const prev = targetSel.value;
+    let html = '<option value="">（未分類）</option>';
+
+    // 1. 常用區塊
+    if (topCats.length > 0) {
+      html += `<optgroup label="🔥 常用">`;
+      for (const name of topCats) {
+        const g = groups.find(x => x.name === name);
+        if (g && g.children.length === 0) {
+          html += `<option value="${esc(g.name)}">${esc(g.name)}</option>`;
+        } else if (g && g.children.length > 0) {
+          for(const c of g.children) {
+            const val = `${g.name} / ${c}`;
+            html += `<option value="${esc(val)}">${esc(g.name)} / ${esc(c)}</option>`;
+          }
+        }
+      }
+      html += `</optgroup>`;
+    }
+
+    // 2. 所有分類區塊
+    html += `<optgroup label="所有分類">`;
+    for(const g of groups){
+      // 為了避免常用分類重複出現太多次，這裡可以保留全部，讓使用者習慣
+      if(g.children.length === 0){ html += `<option value="${esc(g.name)}">${esc(g.name)}</option>`; }
+      else{
+        for(const c of g.children){ const val = `${g.name} / ${c}`; html += `<option value="${esc(val)}">${esc(g.name)} / ${esc(c)}</option>`; }
+      }
+    }
+    html += `</optgroup>`;
+
+    targetSel.innerHTML = html;
+    if([...targetSel.options].some(o => o.value === prev)) targetSel.value = prev;
+  };
+
+  buildOptions(fCategory);
+  buildOptions(qCategory);
 }
 
 function renderAccFilter(book){
@@ -1329,7 +1381,6 @@ function renderTx(book){
   const isFiltering = !!(q || accF);
   const accName = id => { const a = book.accounts.find(x => x.id === id); return a ? a.name : '（已刪除）'; };
 
-    // 暫存本次過濾結果，供展開時使用
   currentFilteredTxsByMonth = groups;
 
   txList.innerHTML = monthKeys.map(ym => {
@@ -1346,7 +1397,6 @@ function renderTx(book){
     else { const parts = ym.split('-'); monthLabel = `${parts[0]}年${parseInt(parts[1], 10)}月`; }
     
     const isOpen = isFiltering || openMonths.has(ym);
-    // 【關鍵優化】：如果沒展開，就不生成 HTML（省下大量效能）
     const txRows = isOpen ? monthTxs.map(t => renderTxRow(t, book, accName)).join('') : '';
     
     return `<details class="tx-month" data-ym="${ym}" ${isOpen ? 'open' : ''}>
@@ -1376,7 +1426,6 @@ function renderTxRow(t, book, accName){
     const isIncome = t.type === 'income';
     const sign = isIncome ? '+' : '-';
     
-     // 加入 trim() 防呆，避免分類是空白字串導致消失
     const rawCat = String(t.category || '').trim();
     title = rawCat || (isIncome ? '未分類收入' : '未分類支出');
 
@@ -1391,12 +1440,10 @@ function renderTxRow(t, book, accName){
         subParts.push(`分攤: ${esc(t.participants.join(','))}`);
       }
     } else {
-      // 確保帳戶名稱不會是空的
       const aName = accName(t.accountId);
       subParts.push(aName.trim() || '無帳戶');
     }
     
-    // 確保備註不會是空字串
     if (t.note && t.note.trim()) subParts.push(t.note.trim());
     
     sub = subParts.join(' · ');
@@ -1413,13 +1460,11 @@ function renderTxRow(t, book, accName){
       }
     }
   } else if (t.type === 'transfer' && book.type === 'travel' && t.fromMember && t.toMember) {
-    // 旅行账簿：成员借贷
     cls = 'transfer';
     title = '成員借貸';
     sub = `${esc(t.fromMember)} 借給 ${esc(t.toMember)}${t.note ? ' · ' + t.note : ''}`;
     amtHtml = `<div>${fmt(amt)}</div>`;
   } else if (t.type === 'transfer') {
-    // 普通账簿：账户转账
     cls = 'transfer';
     title = '轉帳';
     const fromAmt = amt;
@@ -1455,29 +1500,22 @@ function applyTypeUI(){
   const isTransfer = type === 'transfer';
   const isTravelTx = isTravel && (type === 'expense' || type === 'income');
 
-  // 動態修改下拉選單文字（借貸）
   const transOpt = document.querySelector('#fType option[value="transfer"]');
   if (transOpt) transOpt.textContent = isTravel ? '借貸' : '轉帳';
   
   const eTransOpt = document.querySelector('#eType option[value="transfer"]');
   if (eTransOpt) eTransOpt.textContent = isTravel ? '借貸' : '轉帳';
 
-  // 账户相关（普通帳簿）
   $('fAccountField').hidden = isTravel || isTransfer;
   $('toAccountField').hidden = !(!isTravel && isTransfer);
-
-  // 旅行账簿成员区
   $('travelRow').hidden = !isTravelTx;
 
-  // 普通账簿转账行
   $('transferRow').hidden = !(!isTravel && isTransfer);
   transferHistory.hidden = !(!isTravel && isTransfer);
   if (!(!isTravel && isTransfer)) transferHistory.innerHTML = '';
 
-  // 旅行账簿转账行
   $('travelTransferRow').hidden = !(isTravel && isTransfer);
 
-  // 金额行
   if (isTravelTx) {
     $('amountRow').hidden = false;
     fAmount.readOnly = true;
@@ -1491,11 +1529,9 @@ function applyTypeUI(){
     fAmount.readOnly = false;
   }
 
-  // 外币区
   foreignDetails.hidden = isTransfer;
   if(isTransfer) foreignDetails.open = false;
 
-  // 动态文案
   if (isTravelTx) {
     if (type === 'expense') {
       $('fPayersLabel').textContent = '支付明細（由誰付款，金額多少）';
@@ -1755,7 +1791,7 @@ function openSettlementDetail(memberName){
 
 function closeSettlementDetail(){ settleDetailModal.hidden = true; }
 
-/* ================== 表单事件 ================== */
+/* ================== 表單與排序事件 ================== */
 function onFPayersChange() {
   const total = updatePayerTotal(fCurrentPayers, fPayerTotal);
   fAmount.value = round2(total);
@@ -1883,39 +1919,50 @@ function updateForeignRate(){
   else { fOrigRate.value = ''; }
 }
 
-/* ================== 拖動排序 ================== */
-function getDragAfterElement(container, y, selector){
-  const els = [...container.querySelectorAll(selector)].filter(el => !el.classList.contains('dragging'));
-  return els.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    if(offset < 0 && offset > closest.offset) return { offset: offset, element: child };
-    else return closest;
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
+/* ================== 快速記帳事件 ================== */
+$('fabAdd').addEventListener('click', () => {
+  const book = getBook(); if(!book || book.type === 'travel') return;
+  
+  // 填充帳戶下拉
+  qAccount.innerHTML = book.accounts.map(a => `<option value="${a.id}">${esc(a.name)}（${esc(a.currency)}）</option>`).join('');
+  if (book.defaultAccountId && book.accounts.some(a => a.id === book.defaultAccountId)) {
+    qAccount.value = book.defaultAccountId;
+  } else if (book.accounts.length > 0) {
+    qAccount.value = book.accounts[0].id;
+  }
 
-function makeVerticalSortable(container, itemSelector, onDone){
-  let dragging = null;
-  container.addEventListener('dragstart', e => {
-    const item = e.target.closest(itemSelector);
-    if(!item) return;
-    dragging = item;
-    item.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
+  qAmount.value = '';
+  qNote.value = '';
+  quickModal.hidden = false;
+  setTimeout(() => { qAmount.focus(); }, 100); // 自動彈出數字鍵盤
+});
+
+$('btnCloseQuick').addEventListener('click', () => { quickModal.hidden = true; });
+quickModal.addEventListener('click', e => { if(e.target === quickModal) quickModal.hidden = true; });
+
+quickForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const book = getBook(); if(!book) return;
+  const amt = round2(parseFloat(qAmount.value));
+  if (!(amt > 0)) { alert('請輸入大於 0 的金額'); qAmount.focus(); return; }
+  
+  const acc = book.accounts.find(a => a.id === qAccount.value);
+  if (!acc) { alert('請選擇帳戶'); return; }
+
+  book.txs.push({
+    id: uid(), date: todayStr(), type: 'expense',
+    accountId: acc.id, currency: acc.currency,
+    amount: amt, category: qCategory.value.trim(),
+    note: qNote.value.trim(), createdAt: Date.now()
   });
-  container.addEventListener('dragend', () => {
-    if(dragging) dragging.classList.remove('dragging');
-    dragging = null;
-    onDone && onDone();
-  });
-  container.addEventListener('dragover', e => {
-    e.preventDefault();
-    if(!dragging) return;
-    const afterElement = getDragAfterElement(container, e.clientY, itemSelector);
-    if(afterElement == null) container.appendChild(dragging);
-    else container.insertBefore(dragging, afterElement);
-  });
-}
+
+  saveState();
+  quickModal.hidden = true;
+  refreshAll();
+  
+  // 重新整理常用分類（因為新增了一筆，排行可能改變）
+  refreshCategoryOptions(book);
+});
 
 /* ================== 管理弹窗 ================== */
 function openManageModal(){ manageModal.hidden = false; renderManageModal(); }
@@ -1936,14 +1983,15 @@ function renderManageModal(){
   });
 
   body.innerHTML = `
-          <section class="manage-sec">
+    <section class="manage-sec">
       <h3>當前帳簿 <span class="hint">${esc(book.name)}</span></h3>
       <div style="display:flex; gap:8px;">
         <button type="button" class="btn" id="btnManageRenameBook" style="flex:1;">✎ 修改名稱</button>
         <button type="button" class="btn danger" id="btnManageDeleteBook" style="flex:1;" ${state.books.length <= 1 ? 'disabled' : ''}>✕ 刪除帳簿</button>
       </div>
     </section>
-      <section class="manage-sec" id="memberManageSec" ${isTravel ? '' : 'hidden'}>
+    
+    <section class="manage-sec" id="memberManageSec" ${isTravel ? '' : 'hidden'}>
       <h3>旅行人员 <span class="hint">先建立名單再記帳</span></h3>
       <ul class="tag-list" id="memberManage"></ul>
       <div class="add-row">
@@ -1965,7 +2013,7 @@ function renderManageModal(){
     </section>`}
 
     <section class="manage-sec">
-      <h3>幣種 <span class="hint">可拖動排序</span></h3>
+      <h3>幣種 <span class="hint">使用箭頭排序</span></h3>
       <ul class="tag-list" id="curManage"></ul>
       <div class="add-row">
         <input type="text" id="newCurInput" maxlength="8" placeholder="如 USD" autocomplete="off">
@@ -1974,7 +2022,7 @@ function renderManageModal(){
     </section>
 
     <section class="manage-sec">
-      <h3>支出分類 <span class="hint">可拖動排序</span></h3>
+      <h3>支出分類 <span class="hint">使用箭頭排序</span></h3>
       <ul class="cat-manage-list" id="catExpenseManage"></ul>
       <div class="add-row">
         <input type="text" id="newCatExpenseInput" placeholder="如 餐飲" autocomplete="off">
@@ -1983,7 +2031,7 @@ function renderManageModal(){
     </section>
 
     <section class="manage-sec">
-      <h3>收入分類 <span class="hint">可拖動排序</span></h3>
+      <h3>收入分類 <span class="hint">使用箭頭排序</span></h3>
       <ul class="cat-manage-list" id="catIncomeManage"></ul>
       <div class="add-row">
         <input type="text" id="newCatIncomeInput" placeholder="如 薪水" autocomplete="off">
@@ -2048,7 +2096,6 @@ function renderManageModal(){
     </div>
   `;
 
-  // 成员
   const memberManage = $('memberManage');
   if (memberManage) {
     memberManage.innerHTML = book.members.length
@@ -2056,19 +2103,24 @@ function renderManageModal(){
       : '<li class="empty-tag">尚無成員</li>';
   }
 
-  // 币种
   const curManage = $('curManage');
   curManage.innerHTML = book.currencies.length
-    ? book.currencies.map(c => `<li draggable="true" data-cur="${esc(c)}"><span>${esc(c)}</span><button type="button" class="icon-btn" data-del-cur="${esc(c)}" draggable="false" title="移除">✕</button></li>`).join('')
+    ? book.currencies.map((c, i) => `
+        <li>
+          <span>${esc(c)}</span>
+          <div style="display:flex; gap:2px;">
+            <button type="button" class="icon-btn" data-move-cur="${esc(c)}" data-dir="up" ${i===0?'disabled style="opacity:0.3"':''} title="上移">↑</button>
+            <button type="button" class="icon-btn" data-move-cur="${esc(c)}" data-dir="down" ${i===book.currencies.length-1?'disabled style="opacity:0.3"':''} title="下移">↓</button>
+            <button type="button" class="icon-btn" data-del-cur="${esc(c)}" title="移除">✕</button>
+          </div>
+        </li>`).join('')
     : '<li class="empty-tag">尚無幣種</li>';
 
-  // 分类
   const catExpenseManage = $('catExpenseManage');
   const catIncomeManage = $('catIncomeManage');
   catExpenseManage.innerHTML = buildCategoryHTML(book.categories.expense, 'expense');
   catIncomeManage.innerHTML = buildCategoryHTML(book.categories.income, 'income');
 
-  // 账户（非旅行账簿才渲染）
   const manageAccList = $('manageAccList');
   if (manageAccList) {
     if (book.accounts.length === 0) {
@@ -2113,7 +2165,6 @@ function renderManageModal(){
     });
   }
 
-  // 固定支出（非旅行账簿）
   const fixedList = $('fixedList');
   if (fixedList) {
     const fxAcc = $('fxAcc');
@@ -2129,33 +2180,6 @@ function renderManageModal(){
       </div>
     `).join('') : '<div class="hint">尚無固定支出</div>';
   }
-
-  makeSortable(curManage, '[data-cur]', () => {
-    book.currencies = [...curManage.children].filter(el => el.matches('[data-cur]')).map(li => li.dataset.cur);
-    saveState(); refreshAll();
-  });
-
-  const onMainReorder = kind => () => {
-    const container = kind === 'income' ? catIncomeManage : catExpenseManage;
-    const order = [...container.children].filter(el => el.matches('.cat-group')).map(li => li.dataset.catMain);
-    const map = new Map(book.categories[kind].map(g => [g.name, g]));
-    book.categories[kind] = order.map(n => map.get(n)).filter(Boolean);
-    saveState(); refreshAll();
-  };
-  makeSortable(catExpenseManage, '.cat-group', onMainReorder('expense'));
-  makeSortable(catIncomeManage, '.cat-group', onMainReorder('income'));
-
-  ['expense','income'].forEach(kind => {
-    const container = kind === 'income' ? catIncomeManage : catExpenseManage;
-    container.querySelectorAll('.sub-list').forEach(subUl => {
-      makeSortable(subUl, '[data-cat-sub]', () => {
-        const parent = subUl.dataset.parent;
-        const order = [...subUl.children].filter(el => el.matches('[data-cat-sub]')).map(li => li.dataset.catSub);
-        const group = book.categories[kind].find(g => g.name === parent);
-        if(group){ group.children = order; saveState(); refreshAll(); }
-      });
-    });
-  });
 
   const fsRange = $('fsRange');
   fsRange.value = getFontScale();
@@ -2197,7 +2221,7 @@ function renderManageModal(){
     syncGistIdInput.value = '';
     setSyncInfo('已清除设定');
   });
-    // 管理設定內的帳簿管理
+  
   $('btnManageRenameBook')?.addEventListener('click', () => {
     const name = prompt('帳簿名稱：', book.name);
     if (name !== null && name.trim()) {
@@ -2223,21 +2247,28 @@ function renderManageModal(){
 
 function buildCategoryHTML(groups, kind){
   if(!groups.length) return '<li class="cat-empty">尚無分類</li>';
-  return groups.map(g => {
+  return groups.map((g, i) => {
     const subHtml = g.children.length
-      ? `<ul class="sub-list" data-parent="${esc(g.name)}" data-kind="${kind}">${g.children.map(c => `
-          <li draggable="true" data-cat-sub="${esc(c)}" data-parent="${esc(g.name)}" data-kind="${kind}">
+      ? `<ul class="sub-list" data-parent="${esc(g.name)}" data-kind="${kind}">${g.children.map((c, j) => `
+          <li>
             <span>${esc(c)}</span>
-            <button type="button" class="icon-btn" data-del-sub="${esc(c)}" data-parent="${esc(g.name)}" data-kind="${kind}" draggable="false" title="移除子分類">✕</button>
+            <div style="display:flex; gap:2px;">
+              <button type="button" class="icon-btn" data-move-sub="${esc(c)}" data-parent="${esc(g.name)}" data-kind="${kind}" data-dir="up" ${j===0?'disabled style="opacity:0.3"':''} title="上移">↑</button>
+              <button type="button" class="icon-btn" data-move-sub="${esc(c)}" data-parent="${esc(g.name)}" data-kind="${kind}" data-dir="down" ${j===g.children.length-1?'disabled style="opacity:0.3"':''} title="下移">↓</button>
+              <button type="button" class="icon-btn" data-del-sub="${esc(c)}" data-parent="${esc(g.name)}" data-kind="${kind}" title="移除">✕</button>
+            </div>
           </li>`).join('')}</ul>`
       : '';
     return `
       <li class="cat-group" data-cat-main="${esc(g.name)}" data-kind="${kind}">
-        <div class="cat-head" draggable="true">
-          <span class="drag-handle">⋮⋮</span>
+        <div class="cat-head">
           <span class="cat-name">${esc(g.name)}</span>
-          <button type="button" class="mini-btn" data-add-sub="${esc(g.name)}" data-kind="${kind}" draggable="false" title="新增子分類">＋子</button>
-          <button type="button" class="icon-btn" data-del-cat="${esc(g.name)}" data-kind="${kind}" draggable="false" title="刪除分類">✕</button>
+          <div style="display:flex; gap:2px;">
+            <button type="button" class="icon-btn" data-move-cat="${esc(g.name)}" data-kind="${kind}" data-dir="up" ${i===0?'disabled style="opacity:0.3"':''} title="上移">↑</button>
+            <button type="button" class="icon-btn" data-move-cat="${esc(g.name)}" data-kind="${kind}" data-dir="down" ${i===groups.length-1?'disabled style="opacity:0.3"':''} title="下移">↓</button>
+            <button type="button" class="mini-btn" data-add-sub="${esc(g.name)}" data-kind="${kind}" title="新增子分類">＋子</button>
+            <button type="button" class="icon-btn" data-del-cat="${esc(g.name)}" data-kind="${kind}" title="刪除分類">✕</button>
+          </div>
         </div>
         ${subHtml}
       </li>`;
@@ -2707,35 +2738,6 @@ function importFileHandler(e){
   e.target.value = '';
 }
 
-function makeSortable(container, itemSelector, onDone){
-  let dragging = null;
-  container.addEventListener('dragstart', e => {
-    const item = e.target.closest(itemSelector);
-    if(!item) return;
-    if(item.parentElement !== container) return;
-    dragging = item;
-    item.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    try{ e.dataTransfer.setData('text/plain', ''); }catch(_){}
-    e.stopPropagation();
-  });
-  container.addEventListener('dragend', () => {
-    if(!dragging) return;
-    dragging.classList.remove('dragging');
-    dragging = null;
-    onDone && onDone();
-  });
-  container.addEventListener('dragover', e => {
-    if(!dragging) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const after = getDragAfterElement(container, e.clientY, itemSelector);
-    if(after == null){ if(container.lastElementChild !== dragging) container.appendChild(dragging); }
-    else if(after !== dragging && after !== dragging.nextElementSibling){ container.insertBefore(dragging, after); }
-  });
-  container.addEventListener('drop', e => { if(dragging) e.preventDefault(); });
-}
-
 /* ================== 事件绑定 ================== */
 makeVerticalSortable(bookList, '.book-item', () => {
   const ids = [...bookList.children].map(li => li.dataset.bookId);
@@ -2759,7 +2761,6 @@ bookList.addEventListener('click', e => {
   refreshAll();
 });
 
-// 手機端切換帳簿
 $('mobileBookSelect').addEventListener('change', (e) => {
   state.currentBookId = e.target.value;
   saveState();
@@ -2774,7 +2775,6 @@ $('mobileBookSelect').addEventListener('change', (e) => {
   refreshAll();
 });
 
-// 手機端新增帳簿
 $('btnMobileNewBook').addEventListener('click', () => {
   $('newBookName').value = '新帳簿';
   $('newBookType').value = 'basic';
@@ -2840,27 +2840,28 @@ $('btnCloseSettleDetail').addEventListener('click', closeSettlementDetail);
 settleDetailModal.addEventListener('click', e => { if(e.target === settleDetailModal) closeSettlementDetail(); });
 
 document.addEventListener('keydown', e => {
-   // ===== 新增：快捷鍵 Ctrl+Enter 或 Cmd+Enter =====
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
     if (!editModal.hidden) {
-      // 在編輯視窗時：儲存編輯
       e.preventDefault();
       const btn = editForm.querySelector('button[type="submit"]');
       if (btn) btn.click();
+    } else if (!quickModal.hidden) {
+      e.preventDefault();
+      const btn = quickForm.querySelector('button[type="submit"]');
+      if (btn) btn.click();
     } else if (manageModal.hidden && newBookModal.hidden && settleDetailModal.hidden) {
-      // 在主畫面時：送出「記一筆」
       e.preventDefault();
       const btn = txForm.querySelector('button[type="submit"]');
       if (btn) btn.click();
     }
   }
 
-  // ===== 原有的 Escape 關閉功能 =====
   if(e.key === 'Escape'){
     if(!editModal.hidden) closeEditModal();
     if(!manageModal.hidden) closeManageModal();
     if(!newBookModal.hidden) newBookModal.hidden = true;
     if(!settleDetailModal.hidden) closeSettlementDetail();
+    if(!quickModal.hidden) quickModal.hidden = true;
   }
 });
   
@@ -3164,7 +3165,6 @@ function setDefaultAccount(id){
   saveState(); refreshAll();
 }
 
-// 结算行：单击或双击 → 打开明细
 $('settlementList').addEventListener('click', e => {
   const detailBtn = e.target.closest('[data-settle-detail]');
   if (detailBtn) { openSettlementDetail(detailBtn.getAttribute('data-settle-detail')); return; }
@@ -3232,6 +3232,65 @@ document.addEventListener('click', e => {
 
   const delFxBtn = e.target.closest('[data-del-fx]');
   if(delFxBtn){ removeFixedExpense(delFxBtn.getAttribute('data-del-fx')); return; }
+
+  // ===== 新增：箭頭排序邏輯 =====
+  const moveCurBtn = e.target.closest('[data-move-cur]');
+  if (moveCurBtn) {
+    const book = getBook(); if(!book) return;
+    const cur = moveCurBtn.dataset.moveCur;
+    const dir = moveCurBtn.dataset.dir;
+    const idx = book.currencies.indexOf(cur);
+    if (idx > -1) {
+      if (dir === 'up' && idx > 0) {
+        [book.currencies[idx - 1], book.currencies[idx]] = [book.currencies[idx], book.currencies[idx - 1]];
+      } else if (dir === 'down' && idx < book.currencies.length - 1) {
+        [book.currencies[idx + 1], book.currencies[idx]] = [book.currencies[idx], book.currencies[idx + 1]];
+      }
+      saveState(); renderManageModal();
+    }
+    return;
+  }
+
+  const moveCatBtn = e.target.closest('[data-move-cat]');
+  if (moveCatBtn) {
+    const book = getBook(); if(!book) return;
+    const kind = moveCatBtn.dataset.kind;
+    const name = moveCatBtn.dataset.moveCat;
+    const dir = moveCatBtn.dataset.dir;
+    const list = book.categories[kind];
+    const idx = list.findIndex(g => g.name === name);
+    if (idx > -1) {
+      if (dir === 'up' && idx > 0) {
+        [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+      } else if (dir === 'down' && idx < list.length - 1) {
+        [list[idx + 1], list[idx]] = [list[idx], list[idx + 1]];
+      }
+      saveState(); renderManageModal();
+    }
+    return;
+  }
+
+  const moveSubBtn = e.target.closest('[data-move-sub]');
+  if (moveSubBtn) {
+    const book = getBook(); if(!book) return;
+    const kind = moveSubBtn.dataset.kind;
+    const parent = moveSubBtn.dataset.parent;
+    const name = moveSubBtn.dataset.moveSub;
+    const dir = moveSubBtn.dataset.dir;
+    const group = book.categories[kind].find(g => g.name === parent);
+    if (group) {
+      const idx = group.children.indexOf(name);
+      if (idx > -1) {
+        if (dir === 'up' && idx > 0) {
+          [group.children[idx - 1], group.children[idx]] = [group.children[idx], group.children[idx - 1]];
+        } else if (dir === 'down' && idx < group.children.length - 1) {
+          [group.children[idx + 1], group.children[idx]] = [group.children[idx], group.children[idx + 1]];
+        }
+        saveState(); renderManageModal();
+      }
+    }
+    return;
+  }
 });
 
 document.addEventListener('keydown', e => {
@@ -3253,7 +3312,6 @@ txList.addEventListener('toggle', e => {
   
   if (d.open) {
     openMonths.add(ym);
-    // 【關鍵優化】：如果是剛展開且內容是空的，動態渲染
     const body = d.querySelector('.tx-month-body');
     if (body && body.innerHTML.trim() === '') {
       const book = getBook(); if(!book) return;
@@ -3294,7 +3352,7 @@ window.addEventListener('online', () => {
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState !== 'visible') return;
   if(!getSyncToken() || !getGistId()) return;
-  if(!editModal.hidden || !manageModal.hidden || !settleDetailModal.hidden) return;
+  if(!editModal.hidden || !manageModal.hidden || !settleDetailModal.hidden || !quickModal.hidden) return;
   const now = Date.now();
   if(now - syncLastCheck < 10000) return;
   syncLastCheck = now;
@@ -3316,53 +3374,43 @@ document.addEventListener('visibilitychange', () => {
   const loadingOverlay = $('loadingOverlay');
   if (loadingOverlay) loadingOverlay.hidden = false;
 
-  // ==========================================
-  // 第一步：先用本地資料極速渲染畫面（不等待網路）
-  // ==========================================
   init();
   applyFontScale(getFontScale());
   fDate.value = todayStr();
   const book = getBook();
   refreshMemberSelects(book);
+  refreshCategoryOptions(book); // 初始化快速記帳的分類
   renderPayers(fPayersList, fCurrentPayers, fPayerTotal, onFPayersChange);
   renderParticipants(fParticipantsGroup, fCurrentParticipants, onFParticipantsChange);
   render();
   applyTypeUI();
+  
   if (book.type !== 'travel') fAmount.focus();
 
-  // 立刻關閉加載動畫，讓使用者可以馬上開始操作
   if (loadingOverlay) {
     loadingOverlay.style.opacity = '0';
     setTimeout(() => { loadingOverlay.hidden = true; }, 300);
   }
 
-  // ==========================================
-  // 第二步：背景靜默拉取雲端資料（不卡頓）
-  // ==========================================
   const isOnline = navigator.onLine;
   
   if(isOnline && getSyncToken() && getGistId()){
-    // 這裡刻意不加 await，讓它在背景下載
     gistPull().then(cloud => {
       if(cloud && Array.isArray(cloud.books)){
         const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
         const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
         
-        // 如果雲端資料比較新，就覆蓋本地並重新渲染
         if(cloudTime > localTime){
           backupLocalBeforeOverwrite();
           state = cloud;
           localStorage.setItem(STORE_KEY, JSON.stringify(state));
           
-          // 重新渲染最新資料
           init();
           const newBook = getBook();
           refreshMemberSelects(newBook);
+          refreshCategoryOptions(newBook);
           render();
           applyTypeUI();
-          
-          // 給個小提示（可選）
-          // alert('已從雲端同步最新資料');
         }
       }
     }).catch(e => {
@@ -3374,12 +3422,10 @@ document.addEventListener('visibilitychange', () => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').then(reg => {
-      // 檢查是否有新版本
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // 這裡可以選擇跳提示，或者直接默默刷新
             console.log('發現新版本，下次打開將自動更新。');
           }
         });
