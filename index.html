@@ -3374,48 +3374,61 @@ document.addEventListener('visibilitychange', () => {
   const loadingOverlay = $('loadingOverlay');
   if (loadingOverlay) loadingOverlay.hidden = false;
 
-  init();
-  applyFontScale(getFontScale());
-  fDate.value = todayStr();
-  const book = getBook();
-  refreshMemberSelects(book);
-  refreshCategoryOptions(book); // 初始化快速記帳的分類
-  renderPayers(fPayersList, fCurrentPayers, fPayerTotal, onFPayersChange);
-  renderParticipants(fParticipantsGroup, fCurrentParticipants, onFParticipantsChange);
-  render();
-  applyTypeUI();
-  
-  if (book.type !== 'travel') fAmount.focus();
+  try {
+    init();
+    applyFontScale(getFontScale());
+    fDate.value = todayStr();
+    const book = getBook();
+    refreshMemberSelects(book);
+    renderPayers(fPayersList, fCurrentPayers, fPayerTotal, onFPayersChange);
+    renderParticipants(fParticipantsGroup, fCurrentParticipants, onFParticipantsChange);
+    render();
+    applyTypeUI();
+    
+    if (book && book.type !== 'travel') fAmount.focus();
 
-  if (loadingOverlay) {
-    loadingOverlay.style.opacity = '0';
-    setTimeout(() => { loadingOverlay.hidden = true; }, 300);
-  }
+    if (loadingOverlay) {
+      loadingOverlay.style.opacity = '0';
+      setTimeout(() => { loadingOverlay.hidden = true; }, 300);
+    }
 
-  const isOnline = navigator.onLine;
-  
-  if(isOnline && getSyncToken() && getGistId()){
-    gistPull().then(cloud => {
-      if(cloud && Array.isArray(cloud.books)){
-        const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
-        const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
-        
-        if(cloudTime > localTime){
-          backupLocalBeforeOverwrite();
-          state = cloud;
-          localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    const isOnline = navigator.onLine;
+    if(isOnline && getSyncToken() && getGistId()){
+      gistPull().then(cloud => {
+        if(cloud && Array.isArray(cloud.books)){
+          const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
+          const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
           
-          init();
-          const newBook = getBook();
-          refreshMemberSelects(newBook);
-          refreshCategoryOptions(newBook);
-          render();
-          applyTypeUI();
+          if(cloudTime > localTime){
+            backupLocalBeforeOverwrite();
+            state = cloud;
+            localStorage.setItem(STORE_KEY, JSON.stringify(state));
+            
+            init();
+            const newBook = getBook();
+            refreshMemberSelects(newBook);
+            render();
+            applyTypeUI();
+          }
         }
-      }
-    }).catch(e => {
-      console.warn('背景拉取失敗，繼續使用本地資料', e);
-    });
+      }).catch(e => {
+        console.warn('背景拉取失敗，繼續使用本地資料', e);
+      });
+    }
+  } catch (error) {
+    console.error("初始化嚴重錯誤:", error);
+    if (loadingOverlay) {
+      // 如果出錯，直接把錯誤訊息顯示在畫面上！
+      loadingOverlay.innerHTML = `
+        <div style="color: var(--red); text-align: center; padding: 20px; max-width: 80%;">
+          <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
+          <h2 style="font-size: 16px;">載入失敗</h2>
+          <p style="font-size: 12px; margin-top: 10px; user-select: text; background: rgba(255,0,0,0.1); padding: 10px; border-radius: 8px; text-align: left; word-break: break-all;">${error.message}</p>
+          <button onclick="location.reload()" style="margin-top: 15px; padding: 8px 16px; border-radius: 8px; border: none; background: var(--primary); color: white;">重新整理</button>
+        </div>
+      `;
+      loadingOverlay.style.opacity = '1';
+    }
   }
 })();
 
