@@ -4,6 +4,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -2739,11 +2740,6 @@ function importFileHandler(e){
 }
 
 /* ================== 事件绑定 ================== */
-makeVerticalSortable(bookList, '.book-item', () => {
-  const ids = [...bookList.children].map(li => li.dataset.bookId);
-  state.books.sort((a,b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-  saveState(); renderBookList();
-});
 
 bookList.addEventListener('click', e => {
   const item = e.target.closest('[data-book-id]');
