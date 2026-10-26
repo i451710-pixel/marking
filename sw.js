@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ledger-cache-v3'; // 更新版本號
+const CACHE_NAME = 'ledger-cache-v4'; // 更新版本號
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
