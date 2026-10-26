@@ -880,6 +880,71 @@ function loadState(){
   }catch(e){ return null; }
 }
 
+// 輔助函數：取得未被刪除的有效交易
+function getActiveTxs(book) {
+  return book.txs.filter(t => !t.deleted);
+}
+
+// 定期清理超過 30 天的「軟刪除」資料，防止 JSON 無限膨脹
+function cleanupDeletedTxs(book) {
+  if (!book || !book.txs) return;
+  const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  
+  book.txs = book.txs.filter(t => {
+    if (t.deleted) {
+      const deleteTime = t.updatedAt || t.createdAt || 0;
+      return (now - deleteTime) < THIRTY_DAYS;
+    }
+    return true;
+  });
+}
+
+// 深度合併雲端與本機資料（支援刪除標記）
+function mergeStates(local, cloud) {
+  if (!local || !local.books) return cloud;
+  if (!cloud || !cloud.books) return local;
+
+  const localTime = local[STATE_UPDATED_KEY] || 0;
+  const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
+  const isLocalNewer = localTime > cloudTime;
+
+  const merged = JSON.parse(JSON.stringify(isLocalNewer ? local : cloud));
+  
+  local.books.forEach(localBook => {
+    let targetBook = merged.books.find(b => b.id === localBook.id);
+    if (!targetBook) {
+      merged.books.push(JSON.parse(JSON.stringify(localBook)));
+    } else {
+      const txMap = new Map();
+      targetBook.txs.forEach(t => txMap.set(t.id, t)); 
+      
+      localBook.txs.forEach(t => {
+        if (!txMap.has(t.id)) {
+          txMap.set(t.id, t);
+        } else {
+          // 衝突處理：比對 updatedAt，保留較新的狀態
+          const baseTx = txMap.get(t.id);
+          const tTime = t.updatedAt || t.createdAt || 0;
+          const baseTime = baseTx.updatedAt || baseTx.createdAt || 0;
+          if (tTime > baseTime) {
+            txMap.set(t.id, t);
+          }
+        }
+      });
+      
+      targetBook.txs = Array.from(txMap.values());
+      targetBook.txs.sort((a, b) => {
+        const d = String(b.date || '').localeCompare(String(a.date || ''));
+        return d !== 0 ? d : (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    }
+  });
+
+  merged[STATE_UPDATED_KEY] = Date.now();
+  return merged;
+}
+  
 function saveState(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch(e){ console.warn('儲存失敗', e); }
@@ -1103,23 +1168,23 @@ function backupLocalBeforeOverwrite(){
 
 async function syncNow(showAlert){
   const token = getSyncToken();
-  if(!token){ if(showAlert) alert('请先在「管理设定」启用云端同步'); return; }
-  setSyncInfo('同步中…');
+  if(!token){ if(showAlert) alert('請先在「管理設定」啟用雲端同步'); return; }
+  setSyncInfo('同步合併中…');
   try {
     const cloud = getGistId() ? await gistPull() : null;
-    const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
-    const cloudTime = cloud ? (cloud[STATE_UPDATED_KEY] || 0) : 0;
-    if(cloud && Array.isArray(cloud.books) && cloudTime > localTime){
+    
+    if(cloud && Array.isArray(cloud.books)){
       backupLocalBeforeOverwrite();
-      state = cloud;
+      state = mergeStates(state, cloud);
       localStorage.setItem(STORE_KEY, JSON.stringify(state));
       refreshAll();
-      setSyncInfo(`已从云端拉取 · 本地已备份 · ${new Date().toLocaleTimeString()}`);
+      setSyncInfo(`已從雲端合併 · ${new Date().toLocaleTimeString()}`);
+      await gistPush();
     } else {
       await gistPush();
     }
   } catch(e){
-    setSyncInfo('同步失败：' + e.message, true);
+    setSyncInfo('同步失敗：' + e.message, true);
     if(showAlert) alert(e.message);
   }
 }
@@ -1132,6 +1197,10 @@ function init(){
     state.currentBookId = b.id;
   }
   state.books.forEach(normalizeBook);
+  
+  // 新增這行：清理超過 30 天的軟刪除資料
+  state.books.forEach(cleanupDeletedTxs); 
+
   if(!state.currentBookId || !state.books.some(b => b.id === state.currentBookId)){
     state.currentBookId = state.books[0].id;
   }
@@ -1143,7 +1212,7 @@ function accountBalance(book, accId){
   const acc = book.accounts.find(a => a.id === accId);
   if(!acc) return 0;
   let bal = Number(acc.initial) || 0;
-  for(const t of book.txs){
+   for(const t of getActiveTxs(book)){
     if(t.pending) continue;
     if(t.amount == null || t.amount === '') continue;
     const amt = Number(t.amount) || 0;
@@ -1284,7 +1353,7 @@ function refreshCategoryOptions(book){
 
   // 統計常用分類 (只算大分類)
   const usageCount = {};
-  book.txs.forEach(t => {
+    getActiveTxs(book).forEach(t => {
     if (t.type === kind && t.category) {
       let mainCat = t.category.split('/')[0].trim();
       if (mainCat) usageCount[mainCat] = (usageCount[mainCat] || 0) + 1;
@@ -1344,7 +1413,7 @@ function renderAccFilter(book){
 function renderTx(book){
   const q = (searchInput.value || '').trim().toLowerCase();
   const accF = accFilter.value;
-  let txs = book.txs.slice().sort((a, b) => {
+  let txs = getActiveTxs(book).slice().sort((a, b) => {
     const d = String(b.date || '').localeCompare(String(a.date || ''));
     return d !== 0 ? d : (b.createdAt || 0) - (a.createdAt || 0);
   });
@@ -1611,7 +1680,7 @@ function renderParticipants(container, participants, onChange) {
 /* ================== 结算 ================== */
 function computeSettlement(book){
   const allMembers = new Set(book.members);
-  book.txs.forEach(t => {
+  getActiveTxs(book).forEach(t => {
     if ((t.type === 'expense' || t.type === 'income') && !t.pending) {
       if (t.payers) t.payers.forEach(p => { if(p.name) allMembers.add(p.name); });
       if (t.participants) t.participants.forEach(p => allMembers.add(p));
@@ -1626,7 +1695,7 @@ function computeSettlement(book){
   const details = {};
   allMembers.forEach(m => { balance[m] = 0; details[m] = []; });
 
-  book.txs.forEach(t => {
+  getActiveTxs(book).forEach(t => {
     if (t.type === 'expense' && !t.pending) {
       if (!t.payers || !t.participants || !t.participants.length) return;
       const total = Number(t.amount); if (!total) return;
@@ -1954,7 +2023,8 @@ quickForm.addEventListener('submit', e => {
     id: uid(), date: todayStr(), type: 'expense',
     accountId: acc.id, currency: acc.currency,
     amount: amt, category: qCategory.value.trim(),
-    note: qNote.value.trim(), createdAt: Date.now()
+    note: qNote.value.trim(), createdAt: Date.now(),
+    updatedAt: Date.now()
   });
 
   saveState();
@@ -2323,9 +2393,9 @@ function drawCharts() {
   let filteredTxs = [];
   const y = $('chartYear').value;
   const m = $('chartMonth').value;
-  if (mode === 'month') { const ym = `${y}-${String(m).padStart(2, '0')}`; filteredTxs = book.txs.filter(t => t.type === 'expense' && !t.pending && t.date.startsWith(ym)); }
-  else if (mode === 'year') { filteredTxs = book.txs.filter(t => t.type === 'expense' && !t.pending && t.date.startsWith(y)); }
-  else { const s = $('chartStart').value; const e = $('chartEnd').value; if (!s || !e) return; filteredTxs = book.txs.filter(t => t.type === 'expense' && !t.pending && t.date >= s && t.date <= e); }
+  if (mode === 'month') { const ym = `${y}-${String(m).padStart(2, '0')}`; filteredTxs = getActiveTxs(book).filter(t => t.type === 'expense' && !t.pending && t.date.startsWith(ym)); }
+  else if (mode === 'year') { filteredTxs = getActiveTxs(book).filter(t => t.type === 'expense' && !t.pending && t.date.startsWith(y)); }
+  else { const s = $('chartStart').value; const e = $('chartEnd').value; if (!s || !e) return; filteredTxs = getActiveTxs(book).filter(t => t.type === 'expense' && !t.pending && t.date >= s && t.date <= e); }
   if (accId) filteredTxs = filteredTxs.filter(t => t.accountId === accId);
   const catTotals = {};
   filteredTxs.forEach(t => { let mainCat = (t.category || '未分類').split('/')[0].trim(); if (!mainCat) mainCat = '未分類'; catTotals[mainCat] = (catTotals[mainCat] || 0) + (Number(t.amount) || 0); });
@@ -2375,6 +2445,7 @@ function duplicateTx(txId){
   copy.date = todayStr();
   copy.createdAt = Date.now();
   delete copy.isFixed;
+  copy.updatedAt = Date.now();
 
   book.txs.push(copy);
   saveState();
@@ -2972,7 +3043,8 @@ txForm.addEventListener('submit', e => {
     amount: hasAmount ? amount : null,
     category: fCategory.value.trim(),
     note: fNote.value.trim(),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    updatedAt: Date.now() 
   };
 
   if (isTravel) {
@@ -3125,6 +3197,7 @@ editForm.addEventListener('submit', e => {
     else { delete tx.origCurrency; delete tx.origAmount; }
   }
 
+  tx.updatedAt = Date.now();
   saveState();
   closeEditModal();
   refreshAll();
@@ -3134,7 +3207,11 @@ $('btnDeleteEdit').addEventListener('click', () => {
   if(!editingTxId) return;
   if(!confirm('確定刪除這筆交易？')) return;
   const book = getBook(); if(!book) return;
-  book.txs = book.txs.filter(t => t.id !== editingTxId);
+  const tx = book.txs.find(t => t.id === editingTxId);
+  if (tx) {
+    tx.deleted = true;
+    tx.updatedAt = Date.now();
+  }
   saveState();
   closeEditModal();
   refreshAll();
@@ -3184,12 +3261,16 @@ document.addEventListener('click', e => {
   const setDefBtn = e.target.closest('[data-set-default]');
   if(setDefBtn){ setDefaultAccount(setDefBtn.getAttribute('data-set-default')); return; }
 
-  const delTxBtn = e.target.closest('[data-del-tx]');
+    const delTxBtn = e.target.closest('[data-del-tx]');
   if(delTxBtn){
     const book = getBook(); if(!book) return;
     const id = delTxBtn.getAttribute('data-del-tx');
     if(!confirm('確定刪除這筆交易？')) return;
-    book.txs = book.txs.filter(t => t.id !== id);
+    const tx = book.txs.find(t => t.id === id);
+    if(tx) {
+      tx.deleted = true;
+      tx.updatedAt = Date.now();
+    }
     saveState(); refreshAll();
     return;
   }
@@ -3340,8 +3421,15 @@ function applyFontScale(v){
 
 window.addEventListener('online', () => {
   if(getSyncToken() && getGistId()){
-    setSyncInfo('網絡已恢復，正在同步…');
-    gistPush();
+    setSyncInfo('網絡已恢復，正在合併數據…');
+    gistPull().then(cloud => {
+      if(cloud && Array.isArray(cloud.books)){
+        state = mergeStates(state, cloud);
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+        refreshAll();
+      }
+      gistPush();
+    }).catch(() => gistPush());
   }
 });
 
@@ -3349,19 +3437,22 @@ document.addEventListener('visibilitychange', () => {
   if(document.visibilityState !== 'visible') return;
   if(!getSyncToken() || !getGistId()) return;
   if(!editModal.hidden || !manageModal.hidden || !settleDetailModal.hidden || !quickModal.hidden) return;
+  
   const now = Date.now();
   if(now - syncLastCheck < 10000) return;
   syncLastCheck = now;
+  
   gistPull().then(cloud => {
     if(!cloud || !Array.isArray(cloud.books)) return;
-    const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
-    const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
-    if(cloudTime > localTime){
+    const mergedState = mergeStates(state, cloud);
+    
+    if (JSON.stringify(mergedState.books) !== JSON.stringify(state.books)) {
       backupLocalBeforeOverwrite();
-      state = cloud;
+      state = mergedState;
       localStorage.setItem(STORE_KEY, JSON.stringify(state));
       refreshAll();
-      setSyncInfo(`已从云端更新 · ${new Date().toLocaleTimeString()}`);
+      setSyncInfo(`已從雲端合併數據 · ${new Date().toLocaleTimeString()}`);
+      gistPush();
     }
   }).catch(() => {});
 });
@@ -3376,6 +3467,7 @@ document.addEventListener('visibilitychange', () => {
     fDate.value = todayStr();
     const book = getBook();
     refreshMemberSelects(book);
+    refreshCategoryOptions(book);
     renderPayers(fPayersList, fCurrentPayers, fPayerTotal, onFPayersChange);
     renderParticipants(fParticipantsGroup, fCurrentParticipants, onFParticipantsChange);
     render();
@@ -3392,19 +3484,21 @@ document.addEventListener('visibilitychange', () => {
     if(isOnline && getSyncToken() && getGistId()){
       gistPull().then(cloud => {
         if(cloud && Array.isArray(cloud.books)){
-          const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
-          const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
+          const mergedState = mergeStates(state, cloud);
           
-          if(cloudTime > localTime){
+          if (JSON.stringify(mergedState.books) !== JSON.stringify(state.books)) {
             backupLocalBeforeOverwrite();
-            state = cloud;
+            state = mergedState;
             localStorage.setItem(STORE_KEY, JSON.stringify(state));
             
             init();
             const newBook = getBook();
             refreshMemberSelects(newBook);
+            refreshCategoryOptions(newBook);
             render();
             applyTypeUI();
+            
+            gistPush();
           }
         }
       }).catch(e => {
@@ -3414,7 +3508,6 @@ document.addEventListener('visibilitychange', () => {
   } catch (error) {
     console.error("初始化嚴重錯誤:", error);
     if (loadingOverlay) {
-      // 如果出錯，直接把錯誤訊息顯示在畫面上！
       loadingOverlay.innerHTML = `
         <div style="color: var(--red); text-align: center; padding: 20px; max-width: 80%;">
           <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
