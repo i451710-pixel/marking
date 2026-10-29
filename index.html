@@ -915,6 +915,9 @@ function mergeStates(local, cloud) {
   if (!local || !local.books) return cloud;
   if (!cloud || !cloud.books) return local;
 
+  local.books = local.books.filter(b => b && typeof b === 'object' && b.id);
+  cloud.books = cloud.books.filter(b => b && typeof b === 'object' && b.id);
+  
   const localTime = local[STATE_UPDATED_KEY] || 0;
   const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
   const isLocalNewer = localTime > cloudTime;
@@ -1201,6 +1204,7 @@ async function syncNow(showAlert){
 
 function init(){
   if(!state || !Array.isArray(state.books)) state = { books: [], currentBookId: null };
+  tate.books = state.books.filter(b => b && typeof b === 'object' && b.id);
   if(state.books.length === 0){
     const b = createBook('我的帳簿', 'basic');
     state.books.push(b);
