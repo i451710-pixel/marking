@@ -3419,6 +3419,63 @@ function applyFontScale(v){
   }, 150);
 }
 
+// ===== 實時監聽（智能輪詢）=====
+let pollingTimer = null;
+let lastPollTime = 0;
+
+function startRealtimePolling() {
+  if (pollingTimer) clearInterval(pollingTimer);
+  
+  pollingTimer = setInterval(async () => {
+    // 1. 如果沒有 Token、在離線狀態、或正在編輯彈窗，則暫停拉取
+    if (!getSyncToken() || !getGistId() || !navigator.onLine) return;
+    if (!editModal.hidden || !manageModal.hidden || !settleDetailModal.hidden || !quickModal.hidden) return;
+    
+    // 2. 為了節省 API 額度，如果 10 秒內已經拉取過（例如剛切換視窗），就跳過
+    const now = Date.now();
+    if (now - lastPollTime < 10000) return;
+    lastPollTime = now;
+
+    try {
+      // 3. 靜默拉取（不顯示 Loading）
+      const cloud = await gistPull();
+      if (!cloud || !Array.isArray(cloud.books)) return;
+
+      // 4. 比對時間戳，如果雲端比本機新，就合併並更新畫面
+      const localTime = (state && state[STATE_UPDATED_KEY]) || 0;
+      const cloudTime = cloud[STATE_UPDATED_KEY] || 0;
+      
+      if (cloudTime > localTime) {
+        const mergedState = mergeStates(state, cloud);
+        
+        // 如果合併後的資料真的不一樣，才重新渲染
+        if (JSON.stringify(mergedState.books) !== JSON.stringify(state.books)) {
+          backupLocalBeforeOverwrite();
+          state = mergedState;
+          localStorage.setItem(STORE_KEY, JSON.stringify(state));
+          
+          const oldScrollY = window.scrollY;
+          refreshAll();
+          window.scrollTo(0, oldScrollY); // 保持畫面不跳動
+          
+          setSyncInfo(`已同步他人的更新 · ${new Date().toLocaleTimeString()}`);
+        }
+      }
+    } catch (e) {
+      console.warn('背景輪詢失敗', e);
+    }
+  }, 20000); // 👈 每 20 秒檢查一次
+}
+
+// 當 App 切換到背景時，停止輪詢以節省資源與 API 額度
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (pollingTimer) clearInterval(pollingTimer);
+  } else {
+    startRealtimePolling();
+  }
+});
+  
 window.addEventListener('online', () => {
   if(getSyncToken() && getGistId()){
     setSyncInfo('網絡已恢復，正在合併數據…');
@@ -3519,6 +3576,8 @@ document.addEventListener('visibilitychange', () => {
       loadingOverlay.style.opacity = '1';
     }
   }
+    // 啟動實時監聽
+  startRealtimePolling();
 })();
 
 if ('serviceWorker' in navigator) {
