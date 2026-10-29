@@ -1204,7 +1204,7 @@ async function syncNow(showAlert){
 
 function init(){
   if(!state || !Array.isArray(state.books)) state = { books: [], currentBookId: null };
-  tate.books = state.books.filter(b => b && typeof b === 'object' && b.id);
+  state.books = state.books.filter(b => b && typeof b === 'object' && b.id);
   if(state.books.length === 0){
     const b = createBook('我的帳簿', 'basic');
     state.books.push(b);
