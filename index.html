@@ -2739,15 +2739,9 @@ function refreshLineCategorySelect(book) {
   const groups = book.categories[kind] || [];
   let html = '<option value="">全部合計</option>';
   
+  // 這裡改成只顯示一級分類
   for(const g of groups){
-    if(g.children.length === 0){ 
-      html += `<option value="${esc(g.name)}">${esc(g.name)}</option>`; 
-    } else {
-      for(const c of g.children){ 
-        const val = `${g.name} / ${c}`; 
-        html += `<option value="${esc(val)}">${esc(g.name)} / ${esc(c)}</option>`; 
-      }
-    }
+    html += `<option value="${esc(g.name)}">${esc(g.name)}</option>`;
   }
   
   catSel.innerHTML = html;
@@ -2804,7 +2798,10 @@ function drawCharts() {
 
   let lineTxs = getActiveTxs(book).filter(t => t.type === lineType && !t.pending);
   if (lineCat) {
-    lineTxs = lineTxs.filter(t => t.category === lineCat);
+    lineTxs = lineTxs.filter(t => {
+      const mainCat = (t.category || '').split('/')[0].trim();
+      return mainCat === lineCat;
+    });
   }
 
   const lineData = last12Months.map(ym => {
