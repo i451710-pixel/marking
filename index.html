@@ -2014,9 +2014,9 @@ function renderMobileSummary(book) {
   const hasSpend = spendNames.some(n =>
     Math.abs(spending[n].paid) > 0.001 || Math.abs(spending[n].share) > 0.001
   );
-  const spendHtml = (spendNames.length && hasSpend)
+const spendHtml = (spendNames.length && hasSpend)
     ? spendNames.map(name => `
-        <div class="member-spend-row">
+        <div class="member-spend-row" data-member="${esc(name)}" style="cursor: pointer;" title="點擊查看消費明細">
           <div class="member-spend-name">${esc(name)}</div>
           <div class="member-spend-cell">
             <span class="member-spend-label">代付</span>
