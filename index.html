@@ -518,15 +518,15 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
               </div>
 
               <div class="form-row" id="amountRow" style="margin-top:10px">
-                <div class="field" style="flex:0 0 150px">
-                  <label for="fAmount">金額</label>
-                  <input type="number" id="fAmount" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
-                </div>
-                <div class="field">
-                  <label for="fCategory">分類</label>
-                  <select id="fCategory"></select>
-                </div>
-              </div>
+              <div class="field" id="fAmountField" style="flex:0 0 150px">
+                   <label for="fAmount">金額</label>
+                   <input type="number" id="fAmount" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
+                   </div>
+              <div class="field">
+                   <label for="fCategory">分類</label>
+                   <select id="fCategory"></select>
+                   </div>
+                 </div>
 
               <div class="form-row" id="transferRow" style="margin-top:10px" hidden>
                 <div class="field" style="flex:1 1 100%">
@@ -740,10 +740,10 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
         </div>
 
         <div class="form-row" id="eAmountRow" style="margin-top:10px">
-          <div class="field" style="flex:0 0 150px">
-            <label for="eAmount">金額</label>
-            <input type="number" id="eAmount" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
-          </div>
+  <div class="field" id="eAmountField" style="flex:0 0 150px">
+    <label for="eAmount">金額</label>
+    <input type="number" id="eAmount" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
+  </div>
           <div class="field">
             <label for="eCategory">分類</label>
             <select id="eCategory"></select>
@@ -1732,15 +1732,18 @@ function applyTypeUI(){
   $('travelTransferRow').hidden = !(isTravel && isTransfer);
 
   if (isTravelTx) {
-    $('amountRow').hidden = true;
+    $('amountRow').hidden = false; // 讓分類顯示
+    $('fAmountField').hidden = true; // 只隱藏金額
     fAmount.readOnly = true;
     fAmount.style.opacity = '0.8';
   } else if (!isTransfer) {
     $('amountRow').hidden = false;
+    $('fAmountField').hidden = false; // 恢復金額顯示
     fAmount.readOnly = false;
     fAmount.style.opacity = '1';
   } else {
     $('amountRow').hidden = true;
+    $('fAmountField').hidden = false;
     fAmount.readOnly = false;
   }
 
@@ -1784,12 +1787,18 @@ function renderPayers(container, payers, totalEl, onChange) {
     row.innerHTML = `
       <select class="payer-name">${optionsHtml}</select>
       <input type="number" class="payer-amt calc-input" inputmode="none" step="0.01" min="0" placeholder="金额" value="${p.amount}">
-      <button type="button" class="icon-btn del-payer" ${payers.length === 1 ? 'disabled style="opacity:0.3"' : ''}>✕</button>
+      <button type="button" class="icon-btn del-payer" title="${payers.length === 1 ? '清空' : '刪除'}">✕</button>
     `;
     row.querySelector('.payer-name').addEventListener('change', (e) => { p.name = e.target.value; onChange(); });
     row.querySelector('.payer-amt').addEventListener('input', (e) => { p.amount = e.target.value; onChange(); });
     row.querySelector('.del-payer').addEventListener('click', () => {
-      if (payers.length > 1) { payers.splice(index, 1); renderPayers(container, payers, totalEl, onChange); }
+      if (payers.length > 1) {
+        payers.splice(index, 1);
+      } else {
+        p.name = '';
+        p.amount = '';
+      }
+      renderPayers(container, payers, totalEl, onChange);
     });
     container.appendChild(row);
   });
@@ -2057,10 +2066,11 @@ function renderMobileSummary(book) {
       <div class="settlement-list">${settleHtml}</div>
     </div>`;
 
-  $('mobileSummaryBody').querySelectorAll('[data-member]').forEach(el => {
-    el.addEventListener('click', () =>
-      openSettlementDetail(el.getAttribute('data-member'))
-    );
+  $('mobileSummaryBody').querySelectorAll('.member-spend-row[data-member]').forEach(el => {
+    el.addEventListener('click', () => openSpendingDetail(el.getAttribute('data-member')));
+  });
+  $('mobileSummaryBody').querySelectorAll('.settlement-row[data-member]').forEach(el => {
+    el.addEventListener('click', () => openSettlementDetail(el.getAttribute('data-member')));
   });
 }
 
@@ -2136,6 +2146,57 @@ function openSettlementDetail(memberName){
   settleDetailModal.hidden = false;
 }
 
+function openSpendingDetail(memberName) {
+  const book = getBook();
+  if (!book || book.type !== 'travel') return;
+
+  const txs = getActiveTxs(book).filter(t => 
+    !t.pending && (t.type === 'expense' || t.type === 'income') && 
+    t.participants && t.participants.includes(memberName)
+  ).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  $('settleDetailTitle').textContent = `${memberName} 的消費明細`;
+
+  if (txs.length === 0) {
+    $('settleDetailBody').innerHTML = '<div class="settle-detail-empty">此成員沒有任何消費紀錄</div>';
+  } else {
+    let totalShare = 0;
+    const rows = txs.map(t => {
+      const perPerson = (Number(t.amount) || 0) / t.participants.length;
+      const sign = t.type === 'expense' ? 1 : -1;
+      const shareAmount = perPerson * sign;
+      totalShare += shareAmount;
+      
+      const cat = t.category || (t.type === 'income' ? '退款' : '未分類');
+      const note = t.note ? ` · ${t.note}` : '';
+      const amt = round2(shareAmount);
+      const amtClass = amt >= 0 ? 'minus' : 'plus'; // 支出顯示紅字(minus)，退款顯示綠字(plus)
+      const amtStr = (t.type === 'expense' ? '' : '+') + fmt(amt);
+
+      return `
+        <div class="settle-detail-row">
+          <div class="sd-label">
+            <b>${esc(fmtDate(t.date))} ${esc(cat)}</b>
+            <span>${esc(note)} (人均 ${fmt(Math.abs(perPerson))})</span>
+          </div>
+          <div class="sd-amt ${amtClass}">${amtStr}</div>
+        </div>`;
+    }).join('');
+
+    const totalRounded = round2(totalShare);
+    const totalSign = totalRounded > 0 ? '' : (totalRounded < 0 ? '+' : '');
+
+    $('settleDetailBody').innerHTML = `
+      <div class="settle-detail-list">${rows}</div>
+      <div class="settle-detail-total" style="background:var(--red);">
+        <span>總消費</span>
+        <span>${totalSign}${fmt(Math.abs(totalRounded))}</span>
+      </div>
+    `;
+  }
+  settleDetailModal.hidden = false;
+}
+  
 function closeSettlementDetail(){ settleDetailModal.hidden = true; }
 
 /* ================== 表單與排序事件 ================== */
@@ -2930,15 +2991,18 @@ function applyEditTypeUI(){
   $('eTravelTransferRow').hidden = !(isTravel && isTransfer);
 
   if (isTravelTx) {
-    $('eAmountRow').hidden = true;
+    $('eAmountRow').hidden = false;
+    $('eAmountField').hidden = true;
     eAmount.readOnly = true;
     eAmount.style.opacity = '0.8';
   } else if (!isTransfer) {
     $('eAmountRow').hidden = false;
+    $('eAmountField').hidden = false;
     eAmount.readOnly = false;
     eAmount.style.opacity = '1';
   } else {
     $('eAmountRow').hidden = true;
+    $('eAmountField').hidden = false;
     eAmount.readOnly = false;
   }
 
@@ -3873,7 +3937,7 @@ document.addEventListener('click', e => {
 
   const spendRow = e.target.closest('#memberSpendList [data-member]');
   if (spendRow) {
-    openSettlementDetail(spendRow.getAttribute('data-member'));
+    openSpendingDetail(spendRow.getAttribute('data-member'));
     return;
   }
   const copyBtn = e.target.closest('[data-copy-tx]');
