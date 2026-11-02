@@ -862,16 +862,18 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
     </div>
   </div>
 
-  <div class="modal-backdrop" id="settleDetailModal" hidden>
+ <div class="modal-backdrop" id="settleDetailModal" hidden>
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-head">
         <h2 id="settleDetailTitle">結算明細</h2>
-        <button type="button" class="icon-btn" id="btnCloseSettleDetail" title="關閉">✕</button>
+        <div class="spacer" style="flex: 1;"></div>
+        <!-- 新增分享按鈕 -->
+        <button type="button" class="btn sm" id="btnShareDetail" title="分享截圖" style="margin-right: 8px;">📸 分享</button>
+        <button type="button" class="icon-btn" id="btnCloseSettleDetail" title="關閉" style="margin-left: 0;">✕</button>
       </div>
       <div id="settleDetailBody"></div>
     </div>
   </div>
-</div>
 
 <div class="calc-panel" id="calcPanel" hidden>
   <div class="calc-header">
@@ -3484,8 +3486,87 @@ async function shareScreenshot() {
 
 document.addEventListener('click', (e) => {
   if (e.target.closest('#btnShareSummary')) shareScreenshot();
+  if (e.target.closest('#btnShareDetail')) shareDetailScreenshot();
 });
 
+/* ================== 彈窗明細截圖分享 ================== */
+async function shareDetailScreenshot() {
+  const title = $('settleDetailTitle').textContent;
+  const bodyHtml = $('settleDetailBody').innerHTML;
+  const btn = $('btnShareDetail');
+  const origText = btn.textContent;
+  
+  btn.textContent = '生成中…';
+  btn.disabled = true;
+
+  // 建立臨時容器來拼接截圖內容
+  const tempContainer = document.createElement('div');
+  tempContainer.style.cssText = `
+    position: fixed; left: -9999px; top: 0; width: 400px;
+    background: var(--card); color: var(--text); padding: 20px;
+    box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif;
+  `;
+
+  try {
+    if (typeof html2canvas === 'undefined') throw new Error('截圖庫未加載');
+
+    // 將標題與明細內容寫入
+    tempContainer.innerHTML = `
+      <div style="text-align: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed var(--border);">
+        <div style="font-size: 16px; font-weight: 700; color: var(--primary);">${esc(title)}</div>
+        <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">${esc(todayStr())}</div>
+      </div>
+      ${bodyHtml}
+    `;
+    
+    document.body.appendChild(tempContainer);
+
+    const bgColor = getComputedStyle(document.body).getPropertyValue('--card').trim() || '#ffffff';
+    const scale = Math.min(window.devicePixelRatio || 1, 3);
+
+    const canvas = await html2canvas(tempContainer, {
+      backgroundColor: bgColor,
+      scale,
+      useCORS: true,
+      logging: false
+    });
+
+    document.body.removeChild(tempContainer);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('生成圖片失敗');
+
+    const safeName = title.replace(/[^\w\u4e00-\u9fff-]/g, '_');
+    const filename = `${safeName}_${todayStr()}.png`;
+    const file = new File([blob], filename, { type: 'image/png' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: title,
+        text: title
+      });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setTimeout(() => alert('已下載圖片（當前瀏覽器不支援直接分享）'), 100);
+    }
+  } catch (e) {
+    console.error(e);
+    if (e.name !== 'AbortError') alert('分享失敗：' + e.message);
+  } finally {
+    if (tempContainer.parentNode) document.body.removeChild(tempContainer);
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
+}
+  
 /* ================== 事件绑定 ================== */
 
 bookList.addEventListener('click', e => {
