@@ -32,7 +32,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 html, body { margin: 0; padding: 0; width: 100vw; min-height: 100vh; }
-body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; font-size:14px; line-height:1.5; }
+body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; font-size:14px; line-height:1.5; padding-bottom: 65px; }
 h1,h2,h3{margin:0;font-weight:600}
 h2{font-size:15px}
 #zoom-root { width: calc(100vw / var(--fs-scale)); height: calc(100vh / var(--fs-scale)); zoom: var(--fs-scale); position: relative; display: flex; }
@@ -228,7 +228,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 .mobile-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--card); border-top: 1px solid var(--border);
-  display: flex; justify-content: center; gap: 40px;
+  display: flex; justify-content: space-around;
   padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
   z-index: 90; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
 }
@@ -275,6 +275,49 @@ body.view-investment #viewMain { display: none; }
   border-radius: 6px; margin-bottom: 8px; display: inline-block;
 }
 
+/* ===== 投資視圖佈局 ===== */
+.invest-layout {
+  display: flex;
+  flex-direction: column; /* 手機端預設上下排列 */
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (min-width: 769px) {
+  .invest-layout {
+    flex-direction: row; /* 電腦端左右排列 */
+    align-items: flex-start;
+  }
+  .invest-left {
+    flex: 1 1 350px;
+    position: sticky;
+    top: 20px; /* 左側表單固定在頂部，滾動時不會跟著跑 */
+  }
+  .invest-right {
+    flex: 1.5 1 500px;
+    min-width: 0;
+  }
+}
+
+/* ===== 放大並高亮倒數計時 ===== */
+.invest-countdown {
+  font-size: 16px !important; /* 放大字體 */
+  font-weight: 800 !important;
+  color: var(--primary) !important; /* 預設高亮顏色 */
+  margin-top: 6px !important;
+  letter-spacing: 0.5px;
+}
+
+.invest-card.is-overdue .invest-countdown {
+  color: var(--red) !important; /* 逾期時顯示紅色 */
+  background: rgba(220, 38, 38, 0.1); /* 加上背景微紅底色 */
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}  
+
 /* ===== 手機適配 (<768px) ===== */
 .mobile-book-bar { display: none; }
 @media (max-width: 768px){
@@ -297,7 +340,7 @@ body.view-investment #viewMain { display: none; }
     border: 1px solid var(--border); border-radius: 8px; color: var(--text); line-height: 1.2;
   }
 
-  .sidebar-bottom{ padding: 8px 10px; margin-bottom: 60px; }
+  .sidebar-bottom{ padding: 8px 10px; }
   .sidebar-bottom .btn{ padding: 8px; font-size:13px; }
   .main-wrapper{ height:auto; overflow:visible; padding: 12px 12px 100px; }
   main{ flex-direction: column; }
@@ -505,9 +548,6 @@ body.view-investment #viewMain { display: none; }
             <button id="btnDeleteBook" class="btn sm danger">刪除</button>
           </div>
         </section>
-      </div>
-      <div class="sidebar-bottom">
-        <button id="btnOpenManage" class="btn btn-primary">⚙ 管理設定</button>
       </div>
     </aside>
 
@@ -757,41 +797,47 @@ body.view-investment #viewMain { display: none; }
         </main>
       </div>
 
-      <!-- 投資視圖 -->
-      <div id="viewInvestment" style="padding: 16px 0; max-width: 600px; margin: 0 auto; width: 100%;">
-        <section class="card">
-          <div class="card-head"><h2>📈 新增投資</h2></div>
-          <div class="form-row">
-            <div class="field"><label>金額</label><input type="number" id="invAmount" step="0.01" placeholder="0.00"></div>
-            <div class="field"><label>貨幣</label><select id="invCurrency"></select></div>
-            <div class="field"><label>存入地點</label><select id="invLocation"></select></div>
-            <div class="field"><label>頻次</label>
-              <select id="invFreq">
-                <option value="once">一次性</option>
-                <option value="monthly">月供</option>
-                <option value="yearly">年供</option>
-              </select>
-            </div>
-            <div class="field"><label>取回時間</label><input type="date" id="invEndDate"></div>
-          </div>
-          <div class="form-row" style="margin-top:8px;">
-            <div class="field wide">
-              <label>快捷取回</label>
-              <div style="display:flex; gap:6px;">
-                <button class="btn sm" onclick="setQuickEndDate(1)">1個月</button>
-                <button class="btn sm" onclick="setQuickEndDate(3)">3個月</button>
-                <button class="btn sm" onclick="setQuickEndDate(6)">6個月</button>
-                <button class="btn sm" onclick="setQuickEndDate(12)">1年</button>
+            <!-- 投資視圖 -->
+      <div id="viewInvestment" style="padding: 16px 20px; width: 100%;">
+        <div class="invest-layout">
+          <!-- 左側：輸入區塊 -->
+          <div class="invest-left">
+            <section class="card">
+              <div class="card-head"><h2>📈 新增投資</h2></div>
+              <div class="form-row">
+                <div class="field"><label>金額</label><input type="number" id="invAmount" step="0.01" placeholder="0.00"></div>
+                <div class="field"><label>貨幣</label><select id="invCurrency"></select></div>
+                <div class="field"><label>存入地點</label><select id="invLocation"></select></div>
+                <div class="field"><label>頻次</label>
+                  <select id="invFreq">
+                    <option value="once">一次性</option>
+                    <option value="monthly">月供</option>
+                    <option value="yearly">年供</option>
+                  </select>
+                </div>
+                <div class="field"><label>取回時間</label><input type="date" id="invEndDate"></div>
               </div>
-            </div>
-            <button class="btn btn-primary" id="btnAddInvest" style="margin-top:18px;">新增</button>
+              <div class="form-row" style="margin-top:8px;">
+                <div class="field wide">
+                  <label>快捷取回</label>
+                  <div style="display:flex; gap:6px;">
+                    <button class="btn sm" onclick="setQuickEndDate(1)">1個月</button>
+                    <button class="btn sm" onclick="setQuickEndDate(3)">3個月</button>
+                    <button class="btn sm" onclick="setQuickEndDate(6)">6個月</button>
+                    <button class="btn sm" onclick="setQuickEndDate(12)">1年</button>
+                  </div>
+                </div>
+                <button class="btn btn-primary" id="btnAddInvest" style="margin-top:18px;">新增</button>
+              </div>
+            </section>
           </div>
-        </section>
 
-        <div id="investList" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;"></div>
+          <!-- 右側：記錄區塊 -->
+          <div class="invest-right">
+            <div id="investList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
   <div class="modal-backdrop" id="quickModal" hidden>
     <div class="modal" style="max-width:400px" role="dialog" aria-modal="true">
@@ -1058,9 +1104,11 @@ body.view-investment #viewMain { display: none; }
       </span>
       <span>投資</span>
     </div>
+    <div class="nav-item" id="btnNavManage">
+      <span class="icon">⚙️</span>
+      <span>管理</span>
+    </div>
   </div>
-
-</div>
 
 <div class="calc-panel" id="calcPanel" hidden>
   <div class="calc-header">
@@ -3752,6 +3800,13 @@ async function shareDetailScreenshot() {
 
 document.querySelectorAll('.mobile-nav .nav-item').forEach(item => {
   item.addEventListener('click', () => {
+    // 如果是點擊管理按鈕
+    if (item.id === 'btnNavManage') {
+      openManageModal();
+      return; // 直接返回，不改變高亮狀態，也不切換視圖
+    }
+    
+    // 原本的切換邏輯
     document.querySelectorAll('.mobile-nav .nav-item').forEach(n => n.classList.remove('active'));
     item.classList.add('active');
     
@@ -4005,7 +4060,6 @@ $('btnDeleteBook').addEventListener('click', () => {
   refreshAll();
 });
 
-$('btnOpenManage').addEventListener('click', openManageModal);
 $('btnCloseManage').addEventListener('click', closeManageModal);
 manageModal.addEventListener('click', e => { if(e.target === manageModal) closeManageModal(); });
 
