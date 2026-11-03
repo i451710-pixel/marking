@@ -419,6 +419,45 @@ body.view-investment #viewMain { display: none; }
   color: var(--on-primary); border-color: transparent; font-size: 16px;
 }
 
+/* ===== 預算卡片 ===== */
+.budget-mode-toggle { display: flex; gap: 4px; }
+.budget-mode-btn { padding: 4px 10px; font-size: 12px; border: 1px solid var(--border); background: var(--card); border-radius: 6px; cursor: pointer; color: var(--text); font-family: inherit; transition: background .15s; }
+.budget-mode-btn.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); font-weight: 600; }
+.budget-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
+#budgetNavLabel { font-size: 13px; font-weight: 600; min-width: 100px; text-align: center; font-variant-numeric: tabular-nums; color: var(--text); }
+#budgetJumpSelect { font-size: 12px; padding: 4px 8px; border-radius: 6px; margin-left: auto; }
+#btnBudgetPrev:disabled, #btnBudgetNext:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+.budget-item { display: flex; flex-direction: column; gap: 5px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.budget-item:last-child { border-bottom: none; padding-bottom: 0; }
+.budget-item-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.budget-item-nums-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.budget-item-nums-row b { color: var(--text); font-weight: 700; }
+.budget-item-right { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.budget-item-right.ok { color: var(--muted); }
+.budget-item-right.warn { color: var(--gold); }
+.budget-item-right.over { color: var(--red); }
+.budget-bar { height: 8px; background: var(--soft); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.budget-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.budget-bar-fill.green { background: var(--green); }
+.budget-bar-fill.yellow { background: var(--gold); }
+.budget-bar-fill.red { background: var(--red); }
+
+/* ===== 管理設定 -> 預算區塊 ===== */
+.budget-manage-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.budget-manage-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--soft); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; flex-wrap: wrap; }
+.budget-manage-row .bm-cat { font-weight: 600; min-width: 80px; }
+.budget-manage-row .bm-cur { font-size: 11px; background: var(--border); padding: 2px 6px; border-radius: 4px; color: var(--muted); }
+.budget-manage-row .bm-amt { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+.budget-manage-row .bm-amt-sub { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+.budget-manage-row .bm-del { margin-left: auto; }
+.budget-add-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.budget-add-row select, .budget-add-row input { font-size: 13px; padding: 6px 9px; }
+.budget-add-row input[type=number] { flex: 1 1 80px; min-width: 80px; }
+.budget-add-row select { flex: 0 1 auto; min-width: 80px; }
+.budget-period-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex: 0 0 auto; }
+.budget-period-btn { padding: 5px 10px; font-size: 12px; border: none; background: var(--card); color: var(--text); cursor: pointer; font-family: inherit; }
+.budget-period-btn.active { background: var(--primary); color: var(--on-primary); font-weight: 600; }
+  
 /* ===== 各團友總消費 ===== */
 .member-spend-list { display: flex; flex-direction: column; gap: 6px; }
 .member-spend-row {
@@ -610,6 +649,24 @@ body.view-investment #viewMain { display: none; }
               </div>
             </section>
 
+            <section class="card" id="budgetCard" hidden>
+              <div class="card-head">
+                <h2>預算</h2>
+                <div class="spacer"></div>
+                <div class="budget-mode-toggle">
+                  <button type="button" class="budget-mode-btn active" data-mode="month">按月</button>
+                  <button type="button" class="budget-mode-btn" data-mode="year">按年</button>
+                </div>
+              </div>
+              <div class="budget-nav" id="budgetNav">
+                <button type="button" class="icon-btn" id="btnBudgetPrev" title="上一個">◀</button>
+                <span id="budgetNavLabel">—</span>
+                <button type="button" class="icon-btn" id="btnBudgetNext" title="下一個">▶</button>
+                <select id="budgetJumpSelect"></select>
+              </div>
+              <div id="budgetList"></div>
+            </section>
+            
             <section class="card">
               <div class="card-head"><h2 id="txFormTitle">記一筆</h2></div>
               <form id="txForm" autocomplete="off">
@@ -1241,7 +1298,10 @@ let lineChartInstance = null;
 let chartInitialized = false;
 
 let currentInvId = null;
-
+let budgetMode = 'month';
+let budgetViewYear = null;
+let budgetViewMonth = null;
+  
 function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function todayStr(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -1340,6 +1400,7 @@ function normalizeBook(b){
   if(!Array.isArray(b.members)) b.members = [];
   if(!Array.isArray(b.investments)) b.investments = [];
   if(!Array.isArray(b.investLocations)) b.investLocations = ['股票', '基金', '定存'];
+  if(!Array.isArray(b.budgets)) b.budgets = [];
   if(!Array.isArray(b.currencies) || b.currencies.length === 0){
     const set = new Set(DEFAULT_CURRENCIES);
     b.accounts.forEach(a => { if(a.currency) set.add(a.currency); });
@@ -1627,6 +1688,7 @@ function render(){
   renderTx(book);
   applyTypeUI();
   if (!isTravel) { initChartSelectors(); drawCharts(); }
+  renderBudget(book);
   renderSettlement(book);
   renderMemberSpending(book);
   renderMobileSummary(book);
@@ -2411,6 +2473,176 @@ function openSpendingDetail(memberName) {
 
 function closeSettlementDetail(){ settleDetailModal.hidden = true; }
 
+/* ================== 預算功能 ================== */
+function initBudgetView() {
+  const now = new Date();
+  budgetViewYear = now.getFullYear();
+  budgetViewMonth = now.getMonth() + 1;
+}
+
+function getBudgetSpent(book, budget, year, month) {
+  const { category, currency } = budget;
+  let monthSpent = 0, prevSpent = 0, yearSpent = 0;
+  getActiveTxs(book).forEach(t => {
+    if (t.type !== 'expense') return;
+    if (t.pending) return;
+    if (t.isFixed) return;
+    if (t.isInvest) return;
+    if (!t.date || t.date.length < 7) return;
+    if (t.currency !== currency) return;
+    if (category) {
+      const mainCat = (t.category || '').split('/')[0].trim();
+      if (mainCat !== category) return;
+    }
+    const txY = parseInt(t.date.slice(0, 4), 10);
+    if (txY !== year) return;
+    const amt = Number(t.amount) || 0;
+    yearSpent += amt;
+    const txM = parseInt(t.date.slice(5, 7), 10);
+    if (txM === month) monthSpent += amt;
+    if (txM < month) prevSpent += amt;
+  });
+  return { monthSpent, prevSpent, yearSpent };
+}
+
+function sortBudgets(budgets) {
+  return [...budgets].sort((a, b) => {
+    if (!a.category && b.category) return -1;
+    if (a.category && !b.category) return 1;
+    const c = String(a.currency).localeCompare(String(b.currency));
+    if (c !== 0) return c;
+    return String(a.category || '').localeCompare(String(b.category || ''));
+  });
+}
+
+function renderBudgetItem(book, budget) {
+  const { category, currency, yearlyAmount } = budget;
+  const displayName = category || '全部支出';
+  const { monthSpent, prevSpent, yearSpent } = getBudgetSpent(book, budget, budgetViewYear, budgetViewMonth);
+
+  let ratio, leftText, rightText, rightClass;
+
+  if (budgetMode === 'month') {
+    const cumulativeAvail = yearlyAmount * budgetViewMonth / 12;
+    const available = cumulativeAvail - prevSpent;
+    if (available > 0) {
+      ratio = monthSpent / available;
+      const remain = available - monthSpent;
+      leftText = `已花 <b>${fmt(monthSpent)}</b> / 可用 <b>${fmt(available)}</b>`;
+      if (remain >= 0) {
+        rightText = `剩餘 ${fmt(remain)}`;
+        rightClass = ratio >= 0.8 ? 'warn' : 'ok';
+      } else {
+        rightText = `超支 ${fmt(-remain)}`;
+        rightClass = 'over';
+      }
+    } else {
+      ratio = 1;
+      const totalOver = monthSpent - available;
+      leftText = `本月已花 <b>${fmt(monthSpent)}</b> · 無可用額度`;
+      rightText = `累計超支 ${fmt(totalOver)}`;
+      rightClass = 'over';
+    }
+  } else {
+    ratio = yearlyAmount > 0 ? yearSpent / yearlyAmount : 0;
+    const remain = yearlyAmount - yearSpent;
+    leftText = `已花 <b>${fmt(yearSpent)}</b> / 預算 <b>${fmt(yearlyAmount)}</b>`;
+    if (remain >= 0) {
+      rightText = `剩餘 ${fmt(remain)}`;
+      rightClass = ratio >= 0.8 ? 'warn' : 'ok';
+    } else {
+      rightText = `超支 ${fmt(-remain)}`;
+      rightClass = 'over';
+    }
+  }
+
+  let barColor;
+  if (ratio > 1) barColor = 'red';
+  else if (ratio >= 0.8) barColor = 'yellow';
+  else barColor = 'green';
+  const width = Math.min(ratio * 100, 100);
+
+  return `
+    <div class="budget-item">
+      <div class="budget-item-name">${esc(displayName)} · ${esc(currency)}</div>
+      <div class="budget-item-nums-row">
+        <span>${leftText}</span>
+        <span class="budget-item-right ${rightClass}">${rightText}</span>
+      </div>
+      <div class="budget-bar">
+        <div class="budget-bar-fill ${barColor}" style="width: ${width}%"></div>
+      </div>
+    </div>`;
+}
+
+function renderBudgetNav(book) {
+  const now = new Date();
+  const currentY = now.getFullYear();
+  const currentM = now.getMonth() + 1;
+
+  document.querySelectorAll('.budget-mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === budgetMode);
+  });
+
+  const label = $('budgetNavLabel');
+  if (budgetMode === 'month') {
+    label.textContent = `${budgetViewYear} 年 ${budgetViewMonth} 月`;
+  } else {
+    label.textContent = `${budgetViewYear} 年`;
+  }
+
+  const nextBtn = $('btnBudgetNext');
+  if (budgetMode === 'month') {
+    nextBtn.disabled = (budgetViewYear === currentY && budgetViewMonth === currentM);
+  } else {
+    nextBtn.disabled = (budgetViewYear === currentY);
+  }
+
+  const sel = $('budgetJumpSelect');
+  const txs = getActiveTxs(book);
+  if (budgetMode === 'month') {
+    const periods = new Set();
+    periods.add(`${currentY}-${String(currentM).padStart(2, '0')}`);
+    txs.forEach(t => { if (t.date && t.date.length >= 7) periods.add(t.date.slice(0, 7)); });
+    const sorted = Array.from(periods).sort().reverse();
+    sel.innerHTML = sorted.map(p => {
+      const [y, m] = p.split('-');
+      const isSel = (parseInt(y, 10) === budgetViewYear && parseInt(m, 10) === budgetViewMonth);
+      return `<option value="${p}" ${isSel ? 'selected' : ''}>${y} 年 ${parseInt(m, 10)} 月</option>`;
+    }).join('');
+  } else {
+    const years = new Set();
+    years.add(String(currentY));
+    txs.forEach(t => { if (t.date && t.date.length >= 4) years.add(t.date.slice(0, 4)); });
+    const sorted = Array.from(years).sort().reverse();
+    sel.innerHTML = sorted.map(y => {
+      const isSel = parseInt(y, 10) === budgetViewYear;
+      return `<option value="${y}" ${isSel ? 'selected' : ''}>${y} 年</option>`;
+    }).join('');
+  }
+}
+
+function renderBudget(book) {
+  const card = $('budgetCard');
+  if (!card) return;
+  if (book.type !== 'basic') { card.hidden = true; return; }
+  card.hidden = false;
+
+  if (!budgetViewYear || !budgetViewMonth) initBudgetView();
+  if (!Array.isArray(book.budgets)) book.budgets = [];
+
+  if (book.budgets.length === 0) {
+    $('budgetNav').hidden = true;
+    $('budgetList').innerHTML = '<div class="empty" style="padding:16px 0;">尚無預算，到「管理設定 → 預算」新增</div>';
+    return;
+  }
+
+  $('budgetNav').hidden = false;
+  renderBudgetNav(book);
+  const sorted = sortBudgets(book.budgets);
+  $('budgetList').innerHTML = sorted.map(b => renderBudgetItem(book, b)).join('');
+}
+  
 /* ================== 投資相關 ================== */
 function setQuickEndDate(months) {
   const d = new Date();
@@ -2672,6 +2904,12 @@ function renderManageModal(){
   const book = getBook(); if(!book) return;
   const isTravel = book.type === 'travel';
   const body = $('manageBody');
+
+  let budgetCatOpts = '<option value="">全部支出（總預算）</option>';
+  book.categories.expense.forEach(g => {
+    budgetCatOpts += `<option value="${esc(g.name)}">${esc(g.name)}</option>`;
+  });
+
   let catOpts = '<option value="">無分類</option>';
   book.categories.expense.forEach(g => {
     if(g.children.length === 0){ catOpts += `<option value="${esc(g.name)}">${esc(g.name)}</option>`; }
@@ -2712,6 +2950,22 @@ function renderManageModal(){
       </div>
     </section>
     
+    <section class="manage-sec">
+      <h3>預算 <span class="hint">按年度設定</span></h3>
+      <div class="budget-manage-list" id="budgetManageList"></div>
+      <div class="budget-add-row">
+        <select id="budgetAddCategory">${budgetCatOpts}</select>
+        <select id="budgetAddCurrency">${book.currencies.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select>
+        <div class="budget-period-toggle">
+          <button type="button" class="budget-period-btn active" data-period="year">年</button>
+          <button type="button" class="budget-period-btn" data-period="month">月</button>
+        </div>
+        <input type="number" id="budgetAddAmount" step="0.01" min="0" placeholder="金額">
+        <button type="button" class="btn btn-primary" id="btnAddBudget">＋ 新增</button>
+      </div>
+      <div id="budgetAddHint" class="hint" style="margin-top:6px; min-height:1em;"></div>
+    </section>
+
     <section class="manage-sec">
       <h3>投資存入地點</h3>
       <ul class="tag-list" id="investLocManage"></ul>
@@ -2963,6 +3217,69 @@ function renderManageModal(){
     openMonths = new Set();
     openMonthsInitialized = false;
     closeManageModal();
+    refreshAll();
+  });
+
+  // ========== 預算區塊 ==========
+  const budgetManageList = $('budgetManageList');
+  if (budgetManageList) {
+    if (!Array.isArray(book.budgets)) book.budgets = [];
+    if (book.budgets.length === 0) {
+      budgetManageList.innerHTML = '<div class="hint" style="padding:4px 0;">尚無預算</div>';
+    } else {
+      budgetManageList.innerHTML = sortBudgets(book.budgets).map(b => {
+        const displayName = b.category || '全部支出';
+        const monthlyAvg = b.yearlyAmount / 12;
+        return `
+          <div class="budget-manage-row">
+            <span class="bm-cat">${esc(displayName)}</span>
+            <span class="bm-cur">${esc(b.currency)}</span>
+            <span class="bm-amt">${fmt(b.yearlyAmount)}/年<span class="bm-amt-sub">(${fmt(monthlyAvg)}/月)</span></span>
+            <button type="button" class="icon-btn bm-del" data-del-budget="${b.id}" title="刪除">✕</button>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  const updateBudgetAddHint = () => {
+    const hint = $('budgetAddHint');
+    if (!hint) return;
+    const period = document.querySelector('.budget-period-btn.active')?.dataset.period || 'year';
+    const amt = parseFloat($('budgetAddAmount')?.value);
+    if (period === 'month' && isFinite(amt) && amt > 0) {
+      hint.textContent = `= ${fmt(round2(amt * 12))}/年`;
+    } else {
+      hint.textContent = '';
+    }
+  };
+
+  document.querySelectorAll('.budget-period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.budget-period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateBudgetAddHint();
+    });
+  });
+
+  const budgetAddAmountEl = $('budgetAddAmount');
+  if (budgetAddAmountEl) {
+    budgetAddAmountEl.classList.add('calc-input');
+    budgetAddAmountEl.setAttribute('inputmode', 'none');
+    budgetAddAmountEl.addEventListener('input', updateBudgetAddHint);
+  }
+
+  $('btnAddBudget')?.addEventListener('click', () => {
+    const category = $('budgetAddCategory').value;
+    const currency = $('budgetAddCurrency').value;
+    const period = document.querySelector('.budget-period-btn.active')?.dataset.period || 'year';
+    const amt = parseFloat($('budgetAddAmount').value);
+    if (!currency) { alert('請選擇幣種'); return; }
+    if (!(amt > 0)) { alert('請輸入大於 0 的金額'); $('budgetAddAmount').focus(); return; }
+    const exists = book.budgets.some(b => b.category === category && b.currency === currency);
+    if (exists) { alert('此分類此幣種已有預算，請先刪除或修改'); return; }
+    const yearlyAmount = period === 'month' ? round2(amt * 12) : round2(amt);
+    book.budgets.push({ id: uid(), category, currency, yearlyAmount });
+    saveState();
     refreshAll();
   });
 
@@ -3991,6 +4308,7 @@ bookList.addEventListener('click', e => {
   chartInitialized = false;
   openMonths = new Set();
   openMonthsInitialized = false;
+  initBudgetView();
   refreshAll();
 });
 
@@ -4005,6 +4323,7 @@ $('mobileBookSelect').addEventListener('change', (e) => {
   chartInitialized = false;
   openMonths = new Set();
   openMonthsInitialized = false;
+  initBudgetView();
   refreshAll();
 });
 
@@ -4035,6 +4354,7 @@ $('btnConfirmNewBook').addEventListener('click', () => {
   chartInitialized = false;
   openMonths = new Set();
   openMonthsInitialized = false;
+  initBudgetView();
   newBookModal.hidden = true;
   refreshAll();
 });
@@ -4097,6 +4417,52 @@ document.addEventListener('keydown', e => {
     if(!$('calcPanel').hidden) closeCalculator();
     if(!$('withdrawInvestModal').hidden) $('withdrawInvestModal').hidden = true;
   }
+});
+
+document.querySelectorAll('.budget-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    budgetMode = btn.dataset.mode;
+    const book = getBook();
+    if (book) renderBudget(book);
+  });
+});
+
+$('btnBudgetPrev').addEventListener('click', () => {
+  if (budgetMode === 'month') {
+    budgetViewMonth--;
+    if (budgetViewMonth < 1) { budgetViewMonth = 12; budgetViewYear--; }
+  } else {
+    budgetViewYear--;
+  }
+  const book = getBook();
+  if (book) renderBudget(book);
+});
+
+$('btnBudgetNext').addEventListener('click', () => {
+  const now = new Date();
+  if (budgetMode === 'month') {
+    if (budgetViewYear === now.getFullYear() && budgetViewMonth === now.getMonth() + 1) return;
+    budgetViewMonth++;
+    if (budgetViewMonth > 12) { budgetViewMonth = 1; budgetViewYear++; }
+  } else {
+    if (budgetViewYear === now.getFullYear()) return;
+    budgetViewYear++;
+  }
+  const book = getBook();
+  if (book) renderBudget(book);
+});
+
+$('budgetJumpSelect').addEventListener('change', (e) => {
+  const v = e.target.value;
+  if (budgetMode === 'month') {
+    const [y, m] = v.split('-');
+    budgetViewYear = parseInt(y, 10);
+    budgetViewMonth = parseInt(m, 10);
+  } else {
+    budgetViewYear = parseInt(v, 10);
+  }
+  const book = getBook();
+  if (book) renderBudget(book);
 });
   
 $('chartPeriod').addEventListener('change', drawCharts);
@@ -4418,6 +4784,17 @@ document.addEventListener('click', e => {
   if(e.target.closest('#btnAddCatIncome')){ addMainCategory('income'); return; }
   if(e.target.closest('#btnAddFx')){ addFixedExpense(); return; }
 
+  const delBudgetBtn = e.target.closest('[data-del-budget]');
+  if (delBudgetBtn) {
+    const book = getBook(); if (!book) return;
+    if (!confirm('確定刪除此預算？')) return;
+    const id = delBudgetBtn.getAttribute('data-del-budget');
+    book.budgets = book.budgets.filter(b => b.id !== id);
+    saveState();
+    refreshAll();
+    return;
+  }
+  
   // 新增：表格中點擊成員名字的事件
   const memberClick = e.target.closest('.member-name-click');
   if (memberClick) {
@@ -4700,6 +5077,7 @@ window.addEventListener('resize', () => {
 
   try {
     init();
+    initBudgetView();
     applyFontScale(getFontScale());
     initCalcInputs();
     fDate.value = todayStr();
