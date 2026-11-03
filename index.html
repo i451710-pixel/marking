@@ -32,7 +32,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 html, body { margin: 0; padding: 0; width: 100vw; min-height: 100vh; }
-body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; font-size:14px; line-height:1.5; padding-bottom: 60px; }
+body{ background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif; font-size:14px; line-height:1.5; }
 h1,h2,h3{margin:0;font-weight:600}
 h2{font-size:15px}
 #zoom-root { width: calc(100vw / var(--fs-scale)); height: calc(100vh / var(--fs-scale)); zoom: var(--fs-scale); position: relative; display: flex; }
@@ -297,9 +297,9 @@ body.view-investment #viewMain { display: none; }
     border: 1px solid var(--border); border-radius: 8px; color: var(--text); line-height: 1.2;
   }
 
-  .sidebar-bottom{ padding: 8px 10px; }
+  .sidebar-bottom{ padding: 8px 10px; margin-bottom: 60px; }
   .sidebar-bottom .btn{ padding: 8px; font-size:13px; }
-  .main-wrapper{ height:auto; overflow:visible; padding: 12px 12px 80px; }
+  .main-wrapper{ height:auto; overflow:visible; padding: 12px 12px 100px; }
   main{ flex-direction: column; }
   .col-left, .col-right{ flex:1 1 100%; width:100%; min-width:0; }
   .charts-grid{ grid-template-columns: 1fr; }
@@ -421,6 +421,61 @@ body.view-investment #viewMain { display: none; }
   border-bottom: 1px solid var(--border);
 }
 #btnShareSummary { font-size: 13px; padding: 6px 12px; }
+/* ===== 多貨幣表格佈局 ===== */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.split-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.split-table th, .split-table td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+.split-table th:first-child, .split-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  z-index: 1;
+  font-weight: 600;
+  border-right: 1px dashed var(--border);
+}
+.split-table th {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 12px;
+  background: var(--soft);
+}
+.split-table th:first-child {
+  background: var(--soft);
+}
+.split-table tr:last-child td {
+  border-bottom: none;
+}
+.split-cell-sub {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+}
+.split-cell-main {
+  font-weight: 700;
+}
+.member-name-click {
+  cursor: pointer;
+  display: inline-block;
+  color: var(--primary);
+}
+.member-name-click:hover {
+  text-decoration: underline;
+}
 </style>
 </head>
 <body>
@@ -1540,6 +1595,19 @@ function render(){
     if (wAcc) wAcc.innerHTML = book.accounts.map(a => `<option value="${a.id}">${esc(a.name)}（${esc(a.currency)}）</option>`).join('');
     renderInvestments(book);
   }
+
+  // 👇 隱藏或顯示底部導航（放在這裡才對） 👇
+  const nav = $('globalBottomNav');
+  if (nav) nav.hidden = isTravel;
+  
+  if (isTravel && document.body.classList.contains('view-investment')) {
+    document.body.classList.remove('view-investment');
+    const mainNav = document.querySelector('.nav-item[data-view="main"]');
+    if (mainNav) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      mainNav.classList.add('active');
+    }
+  }
 }
 
 function refreshMemberSelects(book){
@@ -2052,50 +2120,46 @@ function renderSettlement(book) {
   card.hidden = false;
 
   const { currencyBalances, allMembers } = computeSettlement(book);
-  if (allMembers.size === 0) {
+  const currencies = Object.keys(currencyBalances).sort();
+  
+  const activeMembers = new Set();
+  currencies.forEach(cur => {
+    Object.keys(currencyBalances[cur]).forEach(m => {
+      if (Math.abs(currencyBalances[cur][m]) > 0.01) activeMembers.add(m);
+    });
+  });
+
+  if (activeMembers.size === 0) {
     $('settlementList').innerHTML = '<div class="empty" style="padding:10px;">尚無分帳紀錄</div>';
     return;
   }
 
-  window.__settlementBalances = currencyBalances;
-  const currencies = Object.keys(currencyBalances).sort();
-  let html = '';
+  const memberArr = Array.from(activeMembers).sort((a, b) => a.localeCompare(b));
 
-  currencies.forEach(cur => {
-    const balance = currencyBalances[cur];
-    const sortedMembers = Object.keys(balance).sort((a, b) => {
-      const valA = balance[a]; const valB = balance[b];
-      if (valA > 0 && valB <= 0) return -1;
-      if (valA <= 0 && valB > 0) return 1;
-      return Math.abs(valB) - Math.abs(valA);
+  let html = `<div class="table-responsive"><table class="split-table"><thead><tr><th>成員</th>`;
+  currencies.forEach(cur => { html += `<th>${esc(cur)}</th>`; });
+  html += `</tr></thead><tbody>`;
+
+  memberArr.forEach(m => {
+    html += `<tr><td><div class="member-name-click" data-member="${esc(m)}" data-action="settlement" title="點擊查看明細">${esc(m)}</div></td>`;
+    currencies.forEach(cur => {
+      const b = round2(currencyBalances[cur][m] || 0);
+      if (Math.abs(b) > 0.01) {
+        let color = b > 0 ? 'var(--green)' : 'var(--orange)';
+        let label = b > 0 ? '應收' : '應付';
+        const sign = b > 0 ? '+' : '';
+        html += `<td>
+          <div class="split-cell-sub" style="margin-top:0; margin-bottom:2px;">${label}</div>
+          <div class="split-cell-main" style="color:${color};">${sign}${fmt(Math.abs(b))}</div>
+        </td>`;
+      } else {
+        html += `<td><span class="hint">兩清</span></td>`;
+      }
     });
-
-    const hasData = sortedMembers.some(m => Math.abs(balance[m]) > 0.01);
-    if (!hasData) return;
-
-    html += `<div class="currency-section"><div class="currency-header">${esc(cur)}</div><div class="settlement-list">`;
-
-    sortedMembers.forEach(m => {
-      const b = round2(balance[m]);
-      let cls = 'zero'; let label = '兩清'; let sign = '';
-      if (b > 0.01) { cls = 'receivable'; label = '應收'; sign = '+'; }
-      else if (b < -0.01) { cls = 'payable'; label = '應付'; sign = ''; }
-      else { cls = 'zero'; label = '不需給付'; }
-      
-      html += `
-        <div class="settlement-row" data-member="${esc(m)}" data-currency="${esc(cur)}" title="點擊查看明細">
-          <div class="settlement-name">${esc(m)}</div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:12px; color:var(--muted)">${label}</span>
-            <div class="settlement-amt ${cls}">${sign}${fmt(Math.abs(b))}</div>
-            <button type="button" class="icon-btn" data-settle-detail="${esc(m)}" data-currency="${esc(cur)}" title="查看明細">ⓘ</button>
-          </div>
-        </div>`;
-    });
-    html += `</div></div>`;
+    html += `</tr>`;
   });
-
-  $('settlementList').innerHTML = html || '<div class="empty" style="padding:10px;">尚無分帳紀錄</div>';
+  html += `</tbody></table></div>`;
+  $('settlementList').innerHTML = html;
 }
 
 function renderMemberSpending(book) {
@@ -2106,31 +2170,51 @@ function renderMemberSpending(book) {
 
   const currencySpending = computeMemberSpending(book);
   const currencies = Object.keys(currencySpending).sort();
-  let html = '';
-
+  
+  const activeMembers = new Set();
   currencies.forEach(cur => {
-    const spending = currencySpending[cur];
-    const names = Object.keys(spending);
-    const hasAny = names.some(n => Math.abs(spending[n].paid) > 0.001 || Math.abs(spending[n].share) > 0.001);
-    if (!hasAny) return;
-
-    names.sort((a, b) => spending[b].share - spending[a].share);
-    
-    html += `<div class="currency-section"><div class="currency-header">${esc(cur)}</div><div class="member-spend-list">`;
-      
-    names.forEach(name => {
-      if (Math.abs(spending[name].paid) < 0.001 && Math.abs(spending[name].share) < 0.001) return;
-      html += `
-        <div class="member-spend-row" data-member="${esc(name)}" data-currency="${esc(cur)}" style="cursor: pointer;" title="點擊查看明細">
-          <div class="member-spend-name">${esc(name)}</div>
-          <div class="member-spend-cell"><span class="member-spend-label">代付</span><span class="member-spend-val paid">${fmt(spending[name].paid)}</span></div>
-          <div class="member-spend-cell"><span class="member-spend-label">分攤消費</span><span class="member-spend-val share">${fmt(spending[name].share)}</span></div>
-        </div>`;
+    Object.keys(currencySpending[cur]).forEach(m => {
+      if (Math.abs(currencySpending[cur][m].paid) > 0.001 || Math.abs(currencySpending[cur][m].share) > 0.001) {
+        activeMembers.add(m);
+      }
     });
-    html += `</div></div>`;
+  });
+  
+  if (activeMembers.size === 0) {
+    $('memberSpendList').innerHTML = '<div class="empty" style="padding:10px;">尚無消費紀錄</div>';
+    return;
+  }
+
+  const memberArr = Array.from(activeMembers).sort((a, b) => {
+     let totalA = 0, totalB = 0;
+     currencies.forEach(cur => {
+       if (currencySpending[cur][a]) totalA += currencySpending[cur][a].share;
+       if (currencySpending[cur][b]) totalB += currencySpending[cur][b].share;
+     });
+     return totalB - totalA;
   });
 
-  $('memberSpendList').innerHTML = html || '<div class="empty" style="padding:10px;">尚無消費紀錄</div>';
+  let html = `<div class="table-responsive"><table class="split-table"><thead><tr><th>成員</th>`;
+  currencies.forEach(cur => { html += `<th>${esc(cur)}</th>`; });
+  html += `</tr></thead><tbody>`;
+
+  memberArr.forEach(m => {
+    html += `<tr><td><div class="member-name-click" data-member="${esc(m)}" data-action="spending" title="點擊查看明細">${esc(m)}</div></td>`;
+    currencies.forEach(cur => {
+      const data = currencySpending[cur][m];
+      if (data && (Math.abs(data.paid) > 0.001 || Math.abs(data.share) > 0.001)) {
+        html += `<td>
+          <div class="split-cell-main" style="color:var(--primary);">代付 ${fmt(data.paid)}</div>
+          <div class="split-cell-sub" style="color:var(--red);">分攤 ${fmt(data.share)}</div>
+        </td>`;
+      } else {
+        html += `<td><span class="hint">-</span></td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  $('memberSpendList').innerHTML = html;
 }
 
 function renderMobileSummary(book) {
@@ -2139,61 +2223,12 @@ function renderMobileSummary(book) {
   if (book.type !== 'travel') { card.hidden = true; return; }
   card.hidden = false;
 
-  const currencySpending = computeMemberSpending(book);
-  const { currencyBalances } = computeSettlement(book);
-  const currencies = Array.from(new Set([...Object.keys(currencySpending), ...Object.keys(currencyBalances)])).sort();
+  // 先觸發桌面版的渲染取得表格 HTML
+  renderMemberSpending(book);
+  renderSettlement(book);
 
-  let spendHtmlAll = '';
-  let settleHtmlAll = '';
-
-  currencies.forEach(cur => {
-    const spending = currencySpending[cur] || {};
-    const spendNames = Object.keys(spending).sort((a, b) => spending[b].share - spending[a].share);
-    const hasSpend = spendNames.some(n => Math.abs(spending[n].paid) > 0.001 || Math.abs(spending[n].share) > 0.001);
-    
-    if (hasSpend) {
-      spendHtmlAll += `<div class="currency-section"><div class="currency-header">${esc(cur)}</div><div class="member-spend-list">`;
-      spendNames.forEach(name => {
-        if (Math.abs(spending[name].paid) < 0.001 && Math.abs(spending[name].share) < 0.001) return;
-        spendHtmlAll += `
-          <div class="member-spend-row" data-member="${esc(name)}" style="cursor: pointer;" title="點擊查看消費明細">
-            <div class="member-spend-name">${esc(name)}</div>
-            <div class="member-spend-cell"><span class="member-spend-label">代付</span><span class="member-spend-val paid">${fmt(spending[name].paid)}</span></div>
-            <div class="member-spend-cell"><span class="member-spend-label">分攤消費</span><span class="member-spend-val share">${fmt(spending[name].share)}</span></div>
-          </div>`;
-      });
-      spendHtmlAll += `</div></div>`;
-    }
-
-    const balance = currencyBalances[cur] || {};
-    const sortedMembers = Object.keys(balance).sort((a, b) => {
-      const va = balance[a], vb = balance[b];
-      if (va > 0 && vb <= 0) return -1;
-      if (va <= 0 && vb > 0) return 1;
-      return Math.abs(vb) - Math.abs(va);
-    });
-    const hasSettle = sortedMembers.some(m => Math.abs(balance[m]) > 0.01);
-
-    if (hasSettle) {
-      settleHtmlAll += `<div class="currency-section"><div class="currency-header">${esc(cur)}</div><div class="settlement-list">`;
-      sortedMembers.forEach(m => {
-        const b = round2(balance[m]);
-        let cls = 'zero', label = '兩清', sign = '';
-        if (b > 0.01) { cls = 'receivable'; label = '應收'; sign = '+'; }
-        else if (b < -0.01) { cls = 'payable'; label = '應付'; }
-        
-        settleHtmlAll += `
-          <div class="settlement-row" data-member="${esc(m)}">
-            <div class="settlement-name">${esc(m)}</div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:12px; color:var(--muted)">${label}</span>
-              <div class="settlement-amt ${cls}">${sign}${fmt(Math.abs(b))}</div>
-            </div>
-          </div>`;
-      });
-      settleHtmlAll += `</div></div>`;
-    }
-  });
+  const spendHtml = $('memberSpendList').innerHTML;
+  const settleHtml = $('settlementList').innerHTML;
 
   $('mobileSummaryBody').innerHTML = `
     <div class="summary-book-header">
@@ -2202,19 +2237,12 @@ function renderMobileSummary(book) {
     </div>
     <div class="summary-section">
       <div class="summary-section-title">💰 各團友總消費</div>
-      ${spendHtmlAll || '<div class="empty" style="padding:10px;">尚無消費紀錄</div>'}
+      ${spendHtml}
     </div>
     <div class="summary-section">
       <div class="summary-section-title">📊 應付 / 應收</div>
-      ${settleHtmlAll || '<div class="empty" style="padding:10px;">尚無分帳紀錄</div>'}
+      ${settleHtml}
     </div>`;
-
-  $('mobileSummaryBody').querySelectorAll('.member-spend-row[data-member]').forEach(el => {
-    el.addEventListener('click', () => openSpendingDetail(el.getAttribute('data-member')));
-  });
-  $('mobileSummaryBody').querySelectorAll('.settlement-row[data-member]').forEach(el => {
-    el.addEventListener('click', () => openSettlementDetail(el.getAttribute('data-member')));
-  });
 }
 
 function openSettlementDetail(memberName){
@@ -2345,7 +2373,7 @@ function setQuickEndDate(months) {
 function renderInvestments(book) {
   const list = $('investList'); if(!list) return;
   if (book.type === 'travel') { list.innerHTML = '<div class="empty">旅行帳本不支援投資功能</div>'; return; }
-  
+
   const today = new Date(); today.setHours(0,0,0,0);
   const sorted = [...book.investments].sort((a, b) => {
     const aOverdue = a.status === 'active' && new Date(a.endDate) < today;
@@ -2397,6 +2425,10 @@ function renderInvestments(book) {
             ${!isCompleted ? `<div class="invest-countdown">${countdownText}</div>` : '<div class="invest-countdown" style="color:var(--muted);">已取回</div>'}
           </div>
         </div>
+        ${isCompleted ? `<div class="invest-meta" style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap; background:var(--card); padding:8px 12px; border-radius:8px; border:1px dashed var(--border); font-weight:600;">
+          <span style="color:var(--text);">投入: ${fmt(inv.amount)} ${esc(inv.currency)}</span>
+          <span style="color:var(--green);">取回: ${fmt(inv.withdrawAmount || 0)} ${esc(inv.currency)}</span>
+        </div>` : ''}
         <div class="invest-actions">
           ${isCompleted ? '' : `<button class="btn sm" data-edit-inv="${inv.id}">✎ 編輯</button>`}
           ${isCompleted ? '' : `<button class="btn btn-primary sm" data-withdraw-inv="${inv.id}">💰 立即取回</button>`}
@@ -3565,7 +3597,7 @@ async function shareScreenshot() {
 
   const tempContainer = document.createElement('div');
   tempContainer.style.cssText = `
-    position: fixed; left: -9999px; top: 0; width: 480px;
+    position: fixed; left: -9999px; top: 0; width: 800px;
     background: var(--card); color: var(--text); padding: 24px;
     box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif;
   `;
@@ -4324,13 +4356,6 @@ function setDefaultAccount(id){
   saveState(); refreshAll();
 }
 
-$('settlementList').addEventListener('click', e => {
-  const detailBtn = e.target.closest('[data-settle-detail]');
-  if (detailBtn) { openSettlementDetail(detailBtn.getAttribute('data-settle-detail')); return; }
-  const row = e.target.closest('[data-member]');
-  if (row && !detailBtn) { openSettlementDetail(row.getAttribute('data-member')); return; }
-});
-
 document.addEventListener('click', e => {
   if(e.target.closest('#btnAddMember')){ addMember(); return; }
   if(e.target.closest('#btnAddCur')){ addCurrency(); return; }
@@ -4338,11 +4363,16 @@ document.addEventListener('click', e => {
   if(e.target.closest('#btnAddCatIncome')){ addMainCategory('income'); return; }
   if(e.target.closest('#btnAddFx')){ addFixedExpense(); return; }
 
-  const spendRow = e.target.closest('#memberSpendList [data-member]');
-  if (spendRow) {
-    openSpendingDetail(spendRow.getAttribute('data-member'));
+  // 新增：表格中點擊成員名字的事件
+  const memberClick = e.target.closest('.member-name-click');
+  if (memberClick) {
+    const member = memberClick.getAttribute('data-member');
+    const action = memberClick.getAttribute('data-action');
+    if (action === 'spending') openSpendingDetail(member);
+    if (action === 'settlement') openSettlementDetail(member);
     return;
   }
+  
   const copyBtn = e.target.closest('[data-copy-tx]');
   if(copyBtn){ duplicateTx(copyBtn.getAttribute('data-copy-tx')); return; }
 
