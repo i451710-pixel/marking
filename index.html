@@ -278,29 +278,26 @@ body.view-investment #viewMain { display: none; }
 /* ===== 投資視圖佈局 ===== */
 .invest-layout {
   display: flex;
-  flex-direction: column; /* 手機端預設上下排列 */
+  flex-direction: column; /* 手機端上下排列 */
   gap: 16px;
   width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
 }
 
 @media (min-width: 769px) {
   .invest-layout {
-    flex-direction: row; /* 電腦端左右排列 */
+    flex-direction: row; 
+    flex-wrap: wrap; /* 與主介面一樣允許換行 */
     align-items: flex-start;
   }
   .invest-left {
-    flex: 1 1 350px;
-    position: sticky;
-    top: 20px; /* 左側表單固定在頂部，滾動時不會跟著跑 */
+    flex: 1 1 400px; /* 對齊首頁的左欄（消費統計） */
+    min-width: 0;
   }
   .invest-right {
-    flex: 1.5 1 500px;
+    flex: 1.2 1 420px; /* 對齊首頁的右欄（交易紀錄） */
     min-width: 0;
   }
 }
-
 /* ===== 放大並高亮倒數計時 ===== */
 .invest-countdown {
   font-size: 16px !important; /* 放大字體 */
@@ -797,8 +794,8 @@ body.view-investment #viewMain { display: none; }
         </main>
       </div>
 
-            <!-- 投資視圖 -->
-      <div id="viewInvestment" style="padding: 16px 20px; width: 100%;">
+      <!-- 投資視圖 -->
+      <div id="viewInvestment" style="width: 100%;">
         <div class="invest-layout">
           <!-- 左側：輸入區塊 -->
           <div class="invest-left">
@@ -815,6 +812,7 @@ body.view-investment #viewMain { display: none; }
                     <option value="yearly">年供</option>
                   </select>
                 </div>
+                <div class="field"><label>首期供款日</label><input type="date" id="invStartDate"></div>
                 <div class="field"><label>取回時間</label><input type="date" id="invEndDate"></div>
               </div>
               <div class="form-row" style="margin-top:8px;">
@@ -1637,6 +1635,8 @@ function render(){
   if (book.type === 'basic') {
     const invCur = $('invCurrency');
     if (invCur) invCur.innerHTML = book.currencies.map(c => `<option value="${c}">${c}</option>`).join('');
+    const invStartDate = $('invStartDate');
+    if (invStartDate && !invStartDate.value) invStartDate.value = todayStr();
     const invLoc = $('invLocation');
     if (invLoc) invLoc.innerHTML = book.investLocations.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
     const wAcc = $('withdrawAccount');
@@ -3828,7 +3828,7 @@ $('btnAddInvest').addEventListener('click', () => {
   const locId = $('invLocation').value;
   const freq = $('invFreq').value;
   const end = $('invEndDate').value;
-  const start = todayStr();
+  const start = $('invStartDate').value || todayStr();
 
   if (!(amt > 0)) { alert('請輸入金額'); return; }
   if (!end) { alert('請選擇取回時間'); return; }
@@ -3850,6 +3850,7 @@ $('btnAddInvest').addEventListener('click', () => {
   saveState();
   processInvestments(book);
   $('invAmount').value = '';
+  $('invStartDate').value = '';
   $('invEndDate').value = '';
   refreshAll();
   alert('新增投資成功，已自動生成支出紀錄。');
