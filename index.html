@@ -2027,9 +2027,9 @@ function renderTx(book){
   });
   const monthKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
-  const validKeys = new Set(monthKeys);
+    const validKeys = new Set(monthKeys);
   [...openMonths].forEach(k => { if (!validKeys.has(k)) openMonths.delete(k); });
-  if (!openMonthsInitialized && monthKeys.length > 0) { openMonths.add(monthKeys[0]); openMonthsInitialized = true; }
+  if (!openMonthsInitialized && monthKeys.length > 0) { openMonthsInitialized = true; }
 
   const isFiltering = !!(q || accF);
   const accName = id => { const a = book.accounts.find(x => x.id === id); return a ? a.name : '（已刪除）'; };
