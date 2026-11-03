@@ -122,6 +122,56 @@ input:disabled,input[readonly]{opacity:.7; cursor:default; background:var(--soft
 .tx-tools{display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap}
 .tx-tools input{flex:1 1 160px}
 .tx-tools select{flex:0 1 150px}
+  /* ===== 年份導航 ===== */
+.year-nav {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  overflow: hidden;
+  height: 36px;
+  flex: 0 0 auto;
+}
+.year-nav .icon-btn {
+  padding: 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+  height: 100%;
+  line-height: 1;
+  border-radius: 0;
+  color: var(--muted);
+}
+.year-nav .icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+.year-nav .icon-btn:hover:not(:disabled) {
+  background: var(--soft);
+  color: var(--primary);
+}
+.tx-tools .year-nav select.year-select {
+  flex: 0 0 auto;
+  min-width: 90px;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  background: transparent;
+  padding: 6px 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--primary);
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+  height: 100%;
+  outline: none;
+  border-radius: 0;
+}
+.tx-tools .year-nav select.year-select:focus {
+  background: var(--soft);
+}
 .tx-list{margin:0 -4px; flex:1; overflow-y:auto;}
 .tx-row{
   display:grid; grid-template-columns:52px 1fr auto 28px 30px; gap:8px;
@@ -839,17 +889,23 @@ body.view-investment #viewMain { display: none; }
               <div id="mobileSummaryBody"></div>
             </section>
 
-            <section class="card" style="flex:1;">
-              <div class="card-head">
-                <h2>交易紀錄</h2>
-                <span class="hint" id="txCount"></span>
-              </div>
-              <div class="tx-tools">
-                <input type="text" id="searchInput" placeholder="搜尋分類或備註…">
-                <select id="accFilter"><option value="">全部帳戶</option></select>
-              </div>
-              <div class="tx-list" id="txList"></div>
-            </section>
+<section class="card" style="flex:1;">
+  <div class="card-head">
+    <h2>交易紀錄</h2>
+  </div>
+  <div class="tx-tools">
+    <input type="text" id="searchInput" placeholder="搜尋分類或備註…">
+    <select id="accFilter"><option value="">全部帳戶</option></select>
+    <div class="year-nav">
+      <button type="button" class="icon-btn" id="yearPrev" title="上一年">‹</button>
+      <select id="yearSelect" class="year-select">
+        <option value="">全部年份</option>
+      </select>
+      <button type="button" class="icon-btn" id="yearNext" title="下一年">›</button>
+    </div>
+  </div>
+  <div class="tx-list" id="txList"></div>
+</section>
           </div>
         </main>
       </div>
@@ -1226,7 +1282,6 @@ const $ = id => document.getElementById(id);
 const bookList         = $('bookList');
 const accList          = $('accList');
 const txList           = $('txList');
-const txCount          = $('txCount');
 const searchInput      = $('searchInput');
 const accFilter        = $('accFilter');
 const txForm           = $('txForm');
@@ -1304,6 +1359,60 @@ let currentInvId = null;
 let budgetMode = 'month';
 let budgetViewYear = null;
 let budgetViewMonth = null;
+
+/* ===== 年份過濾 ===== */
+const YEAR_STORE_KEY = 'ledger_year_filter';
+let currentYearFilter = undefined;
+
+function setYearFilter(val) {
+  try { localStorage.setItem(YEAR_STORE_KEY, val); } catch(e) {}
+}
+
+function getAvailableYears(book) {
+  const years = new Set();
+  getActiveTxs(book).forEach(t => {
+    if (t.date && t.date.length >= 4) {
+      const y = t.date.slice(0, 4);
+      if (/^\d{4}$/.test(y)) years.add(y);
+    }
+  });
+  return Array.from(years).sort((a, b) => b.localeCompare(a));
+}
+
+function renderYearNav(book, years) {
+  const sel = $('yearSelect');
+  const prev = $('yearPrev');
+  const next = $('yearNext');
+  if (!sel || !prev || !next) return;
+
+  if (years.length === 0) {
+    sel.innerHTML = '<option value="">全部年份</option>';
+    sel.value = '';
+    sel.disabled = true;
+    prev.disabled = true;
+    next.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+
+  let html = '<option value="">全部年份</option>';
+  years.forEach(y => { html += `<option value="${y}">${y} 年</option>`; });
+  sel.innerHTML = html;
+  sel.value = currentYearFilter || '';
+
+  if (currentYearFilter === '') {
+    prev.disabled = true;
+    prev.title = '已選擇「全部年份」';
+    next.disabled = false;
+    next.title = `跳到最新年份 ${years[0]}`;
+  } else {
+    const idx = years.indexOf(currentYearFilter);
+    prev.disabled = idx >= years.length - 1;
+    prev.title = idx < years.length - 1 ? `上一年 ${years[idx + 1]}` : '已是最舊年份';
+    next.disabled = idx <= 0;
+    next.title = idx > 0 ? `下一年 ${years[idx - 1]}` : '已是最新年份';
+  }
+}
   
 function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1868,6 +1977,26 @@ function renderAccFilter(book){
 
 /* ================== 交易列表 ================== */
 function renderTx(book){
+  // ===== 年份過濾初始化 =====
+  const years = getAvailableYears(book);
+  if (currentYearFilter === undefined) {
+    const saved = localStorage.getItem(YEAR_STORE_KEY);
+    if (saved === null) {
+      currentYearFilter = years.length > 0 ? years[0] : '';
+      if (years.length > 0) setYearFilter(currentYearFilter);
+    } else {
+      currentYearFilter = saved;
+    }
+  }
+  if (years.length === 0) {
+    currentYearFilter = '';
+  } else if (currentYearFilter && !years.includes(currentYearFilter)) {
+    currentYearFilter = years[0];
+    setYearFilter(currentYearFilter);
+  }
+  renderYearNav(book, years);
+
+  // ===== 篩選 =====
   const q = (searchInput.value || '').trim().toLowerCase();
   const accF = accFilter.value;
   let txs = getActiveTxs(book).slice().sort((a, b) => {
@@ -1875,6 +2004,7 @@ function renderTx(book){
     return d !== 0 ? d : (b.createdAt || 0) - (a.createdAt || 0);
   });
   if(accF) txs = txs.filter(t => t.accountId === accF || t.toAccountId === accF);
+  if(currentYearFilter) txs = txs.filter(t => (t.date || '').startsWith(currentYearFilter));
   if(q) txs = txs.filter(t =>
     String(t.category || '').toLowerCase().includes(q) ||
     String(t.note || '').toLowerCase().includes(q) ||
@@ -1884,7 +2014,6 @@ function renderTx(book){
     String(t.payers ? t.payers.map(p=>p.name).join(',') : '').toLowerCase().includes(q) ||
     String(t.memberName || '').toLowerCase().includes(q)
   );
-  txCount.textContent = `共 ${txs.length} 筆`;
   if(txs.length === 0){
     txList.innerHTML = `<div class="empty">${book.txs.length ? '沒有符合條件的紀錄' : '還沒有任何紀錄，從上方「記一筆」開始吧'}</div>`;
     return;
@@ -4939,6 +5068,51 @@ document.addEventListener('keydown', e => {
 searchInput.addEventListener('input', () => { const book = getBook(); if(book) renderTx(book); });
 accFilter.addEventListener('change', () => { const book = getBook(); if(book) renderTx(book); });
 
+$('yearSelect').addEventListener('change', (e) => {
+  currentYearFilter = e.target.value;
+  setYearFilter(currentYearFilter);
+  openMonths = new Set();
+  openMonthsInitialized = false;
+  const book = getBook();
+  if (book) renderTx(book);
+});
+
+$('yearPrev').addEventListener('click', () => {
+  if (!currentYearFilter) return;
+  const book = getBook();
+  if (!book) return;
+  const years = getAvailableYears(book);
+  const idx = years.indexOf(currentYearFilter);
+  if (idx < years.length - 1) {
+    currentYearFilter = years[idx + 1];
+    setYearFilter(currentYearFilter);
+    openMonths = new Set();
+    openMonthsInitialized = false;
+    renderTx(book);
+  }
+});
+
+$('yearNext').addEventListener('click', () => {
+  const book = getBook();
+  if (!book) return;
+  const years = getAvailableYears(book);
+  if (years.length === 0) return;
+  if (currentYearFilter === '') {
+    currentYearFilter = years[0];
+  } else {
+    const idx = years.indexOf(currentYearFilter);
+    if (idx > 0) {
+      currentYearFilter = years[idx - 1];
+    } else {
+      return;
+    }
+  }
+  setYearFilter(currentYearFilter);
+  openMonths = new Set();
+  openMonthsInitialized = false;
+  renderTx(book);
+});
+  
 txList.addEventListener('toggle', e => {
   const d = e.target;
   if (!d.matches || !d.matches('.tx-month')) return;
