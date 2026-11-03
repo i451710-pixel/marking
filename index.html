@@ -124,9 +124,12 @@ input:disabled,input[readonly]{opacity:.7; cursor:default; background:var(--soft
 .tx-tools select{flex:0 1 150px}
 .tx-list{margin:0 -4px; flex:1; overflow-y:auto;}
 .tx-row{
-  display:grid; grid-template-columns:52px 1fr auto 28px 28px 30px; gap:8px;
+  display:grid; grid-template-columns:52px 1fr auto 28px 30px; gap:8px;
   align-items:center; padding:9px 4px; border-bottom:1px solid var(--border);
+  cursor:pointer; border-radius:6px;
 }
+.tx-row[data-tx-id]:hover{ background:var(--soft); }
+.tx-row.sys-notice{ cursor:default; }
 .tx-row:last-child{border-bottom:none}
 .tx-row.is-pending{background:rgba(245,158,11,.07); border-radius:8px;}
 .tx-date{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
@@ -346,7 +349,7 @@ body.view-investment #viewMain { display: none; }
   .chart-container{ height: 240px; }
   .form-row .field{ flex: 1 1 100%; }
   
-  .tx-row { grid-template-columns: 40px minmax(0, 1fr) 80px 22px 22px 24px; gap: 4px; padding: 10px 0; }
+  .tx-row { grid-template-columns: 40px minmax(0, 1fr) 80px 22px 24px; gap: 4px; padding: 10px 0; }
   .tx-main { min-width: 0; }
   .tx-amt { font-size: 13px; max-width: 80px; min-width: 0; }
   .tx-amt-sub { white-space: normal; word-break: break-all; text-align: right; font-size: 10px; line-height: 1.2; color: var(--muted); }
@@ -1992,7 +1995,7 @@ function renderTxRow(t, book, accName){
   } else { return ''; }
 
   return `
-    <div class="tx-row ${pending ? 'is-pending' : ''}">
+    <div class="tx-row ${pending ? 'is-pending' : ''}" data-tx-id="${t.id}" title="點擊空白處編輯">
       <div class="tx-date">${esc(fmtDate(t.date))}</div>
       <div class="tx-main">
         <div class="tx-cat">${esc(title)}</div>
@@ -2000,10 +2003,8 @@ function renderTxRow(t, book, accName){
       </div>
       <div class="tx-amt ${cls}">${amtHtml}</div>
       <button type="button" class="icon-btn copy-btn" data-copy-tx="${t.id}" title="複製到今天">⧉</button>
-      <button type="button" class="icon-btn edit-btn" data-edit-tx="${t.id}" title="編輯">✎</button>
       <button type="button" class="icon-btn" data-del-tx="${t.id}" title="刪除">✕</button>
     </div>`;
-}
 
 /* ================== UI 显示逻辑 ================== */
 function applyTypeUI(){
@@ -4808,9 +4809,6 @@ document.addEventListener('click', e => {
   const copyBtn = e.target.closest('[data-copy-tx]');
   if(copyBtn){ duplicateTx(copyBtn.getAttribute('data-copy-tx')); return; }
 
-  const editBtn = e.target.closest('[data-edit-tx]');
-  if(editBtn){ openEditModal(editBtn.getAttribute('data-edit-tx')); return; }
-
   const setDefBtn = e.target.closest('[data-set-default]');
   if(setDefBtn){ setDefaultAccount(setDefBtn.getAttribute('data-set-default')); return; }
 
@@ -4827,7 +4825,14 @@ document.addEventListener('click', e => {
     saveState(); refreshAll();
     return;
   }
-
+    const txRow = e.target.closest('.tx-row[data-tx-id]');
+  if(txRow){
+    if(!e.target.closest('.icon-btn')){
+      openEditModal(txRow.getAttribute('data-tx-id'));
+    }
+    return;
+  }
+  
   const delAccBtn = e.target.closest('[data-del-acc]');
   if(delAccBtn){
     const book = getBook(); if(!book) return;
