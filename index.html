@@ -67,6 +67,12 @@ main{ display:flex; flex-wrap:wrap; align-items:flex-start; gap:16px; }
 input,select{ padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--text); font-size:14px; font-family:inherit; outline:none; transition:border-color .15s; min-width:0; }
 input:focus,select:focus{border-color:var(--primary)}
 input[type=number]{text-align:right}
+/* calc-input 被 readonly 時不要變淡，維持可點 */
+.calc-input[readonly] {
+  opacity: 1;
+  cursor: pointer;
+  background: var(--card);
+}
 input:disabled,input[readonly]{opacity:.7; cursor:default; background:var(--soft)}
 .form-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
 .field{display:flex; flex-direction:column; gap:4px; flex:1 1 120px; min-width:0}
@@ -2211,11 +2217,11 @@ function renderPayers(container, payers, totalEl, onChange) {
     const currentOptions = new Set(book.members);
     if (p.name) currentOptions.add(p.name);
     [...currentOptions].sort().forEach(m => { optionsHtml += `<option value="${esc(m)}" ${p.name === m ? 'selected' : ''}>${esc(m)}</option>`; });
-    row.innerHTML = `
-      <select class="payer-name">${optionsHtml}</select>
-      <input type="number" class="payer-amt calc-input" inputmode="none" step="0.01" min="0" placeholder="金额" value="${p.amount}">
-      <button type="button" class="icon-btn del-payer" title="${payers.length === 1 ? '清空' : '刪除'}">✕</button>
-    `;
+row.innerHTML = `
+  <select class="payer-name">${optionsHtml}</select>
+  <input type="number" class="payer-amt calc-input" inputmode="none" step="0.01" min="0" placeholder="金額" value="${p.amount}" ${window.innerWidth <= 768 ? 'readonly' : ''}>
+  <button type="button" class="icon-btn del-payer" title="${payers.length === 1 ? '清空' : '刪除'}">✕</button>
+`;
     row.querySelector('.payer-name').addEventListener('change', (e) => { p.name = e.target.value; onChange(); });
     row.querySelector('.payer-amt').addEventListener('input', (e) => { p.amount = e.target.value; onChange(); });
     row.querySelector('.del-payer').addEventListener('click', () => {
@@ -3759,12 +3765,12 @@ function applyEditTypeUI(){
   } else if (!isTransfer) {
     $('eAmountRow').hidden = false;
     $('eAmountField').hidden = false;
-    eAmount.readOnly = false;
+    if (window.innerWidth > 768) eAmount.readOnly = false;
     eAmount.style.opacity = '1';
   } else {
     $('eAmountRow').hidden = true;
     $('eAmountField').hidden = false;
-    eAmount.readOnly = false;
+    if (window.innerWidth > 768) eAmount.readOnly = false;
   }
 
   eForeignDetails.hidden = isTransfer;
@@ -4048,13 +4054,15 @@ document.addEventListener('click', (e) => {
   if (btn) { handleCalcKey(btn.dataset.key); }
 });
 
-document.addEventListener('click', (e) => {
+document.addEventListener('pointerdown', (e) => {
   const input = e.target.closest('.calc-input');
   if (!input) return;
   if (window.innerWidth > 768) return;
+  // 阻止 input 聚焦 → 系統鍵盤不彈
+  e.preventDefault();
   if (!$('calcPanel').hidden && calcTarget === input) return;
   openCalculator(input);
-});
+}, true);
 
 document.addEventListener('pointerdown', (e) => {
   if ($('calcPanel').hidden) return;
@@ -4076,9 +4084,28 @@ function initCalcInputs() {
     if (el) {
       el.classList.add('calc-input');
       el.setAttribute('inputmode', 'none');
+      if (window.innerWidth <= 768) el.setAttribute('readonly', 'readonly');
     }
   });
+  document.querySelectorAll('.payer-amt').forEach(el => {
+    el.classList.add('calc-input');
+    el.setAttribute('inputmode', 'none');
+    if (window.innerWidth <= 768) el.setAttribute('readonly', 'readonly');
+  });
 }
+
+// 旋轉/縮放時同步
+let _calcRO;
+window.addEventListener('resize', () => {
+  clearTimeout(_calcRO);
+  _calcRO = setTimeout(() => {
+    const mobile = window.innerWidth <= 768;
+    document.querySelectorAll('.calc-input').forEach(el => {
+      if (mobile) el.setAttribute('readonly', 'readonly');
+      else el.removeAttribute('readonly');
+    });
+  }, 150);
+});
 
 /* ================== 一鍵截圖分享 ================== */
 async function shareScreenshot() {
@@ -5266,6 +5293,7 @@ window.addEventListener('resize', () => {
     refreshCategoryOptions(book);
     renderPayers(fPayersList, fCurrentPayers, fPayerTotal, onFPayersChange);
     renderParticipants(fParticipantsGroup, fCurrentParticipants, onFParticipantsChange);
+    initCalcInputs();
     render();
     applyTypeUI();
     
