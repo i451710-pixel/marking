@@ -614,6 +614,10 @@ body.view-investment #viewMain { display: none; }
 .member-name-click:hover {
   text-decoration: underline;
 }
+
+.split-table tbody tr[data-member] { cursor: pointer; transition: background .15s; }
+.split-table tbody tr[data-member]:hover { background: var(--soft); }
+  
 </style>
 </head>
 <body>
@@ -2393,7 +2397,7 @@ function renderSettlement(book) {
   html += `</tr></thead><tbody>`;
 
   memberArr.forEach(m => {
-    html += `<tr><td><div class="member-name-click" data-member="${esc(m)}" data-action="settlement" title="點擊查看明細">${esc(m)}</div></td>`;
+    html += `<tr data-member="${esc(m)}" data-action="settlement"><td><div class="member-name-click" data-member="${esc(m)}" data-action="settlement" title="點擊查看明細">${esc(m)}</div></td>`;
     currencies.forEach(cur => {
       const b = round2(currencyBalances[cur][m] || 0);
       if (Math.abs(b) > 0.01) {
@@ -2450,8 +2454,8 @@ function renderMemberSpending(book) {
   currencies.forEach(cur => { html += `<th>${esc(cur)}</th>`; });
   html += `</tr></thead><tbody>`;
 
-  memberArr.forEach(m => {
-    html += `<tr><td><div class="member-name-click" data-member="${esc(m)}" data-action="spending" title="點擊查看明細">${esc(m)}</div></td>`;
+    memberArr.forEach(m => {
+    html += `<tr data-member="${esc(m)}" data-action="spending"><td><div class="member-name-click" data-member="${esc(m)}" data-action="spending"
     currencies.forEach(cur => {
       const data = currencySpending[cur][m];
       if (data && (Math.abs(data.paid) > 0.001 || Math.abs(data.share) > 0.001)) {
@@ -5376,6 +5380,16 @@ document.addEventListener('click', e => {
     e.preventDefault();
   }
 }, true);   // ← 第三个参数 true 是关键：捕获阶段
+
+document.addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-member][data-action]');
+  if (!tr) return;
+  if (e.target.closest('.member-name-click')) return;
+  const member = tr.getAttribute('data-member');
+  const action = tr.getAttribute('data-action');
+  if (action === 'spending')   openSpendingDetail(member);
+  if (action === 'settlement') openSettlementDetail(member);
+});
   
 </script>
 </body>
