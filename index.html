@@ -761,7 +761,7 @@ body.view-investment #viewMain { display: none; }
                   <div class="field" style="flex:1 1 100%;">
                     <label style="display:flex; align-items:center; justify-content:space-between;">
                       <span id="fPayersLabel">支付明細（由誰付款，金額多少）</span>
-                      <span style="font-size:12px; color:var(--primary); font-weight:600;">总计: <span id="fPayerTotal">0.00</span></span>
+                      <span style="font-size:12px; color:var(--primary); font-weight:600;">總計: <span id="fPayerTotal">0.00</span></span>
                     </label>
                     <div id="fPayersList" style="display:flex; flex-direction:column; gap:6px;"></div>
                     <div style="margin-top:6px;">
@@ -1824,17 +1824,21 @@ function render(){
     renderInvestments(book);
   }
 
-  // 👇 隱藏或顯示底部導航（放在這裡才對） 👇
-  const nav = $('globalBottomNav');
-  if (nav) nav.hidden = isTravel;
-  
-  if (isTravel && document.body.classList.contains('view-investment')) {
-    document.body.classList.remove('view-investment');
-    const mainNav = document.querySelector('.nav-item[data-view="main"]');
-    if (mainNav) {
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      mainNav.classList.add('active');
-    }
+  // 👇 底部導航：旅行帳本也顯示，只隱藏「投資」入口 👇
+const nav = $('globalBottomNav');
+if (nav) {
+  nav.hidden = false;
+  const investItem = nav.querySelector('.nav-item[data-view="investment"]');
+  if (investItem) investItem.hidden = isTravel;
+}
+
+// 旅行帳本不能停留在「投資」視圖，強制回「記帳」
+if (isTravel && document.body.classList.contains('view-investment')) {
+  document.body.classList.remove('view-investment');
+  const mainNav = document.querySelector('.nav-item[data-view="main"]');
+  if (mainNav) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    mainNav.classList.add('active');
   }
 }
 
@@ -5360,6 +5364,18 @@ if ('serviceWorker' in navigator) {
     }).catch(err => console.log('SW 註冊失敗:', err));
   });
 }
+
+/* 旅行帳本禁用投資視圖（捕獲階段攔截，早於原本的點擊處理） */
+document.addEventListener('click', e => {
+  const item = e.target.closest('.nav-item[data-view]');
+  if (!item) return;
+  const book = getBook();
+  if (item.dataset.view === 'investment' && book && book.type === 'travel') {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}, true);   // ← 第三个参数 true 是关键：捕获阶段
+  
 </script>
 </body>
 </html>
