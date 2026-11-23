@@ -2454,21 +2454,24 @@ function renderMemberSpending(book) {
   currencies.forEach(cur => { html += `<th>${esc(cur)}</th>`; });
   html += `</tr></thead><tbody>`;
 
-    memberArr.forEach(m => {
-    html += `<tr data-member="${esc(m)}" data-action="spending"><td><div class="member-name-click" data-member="${esc(m)}" data-action="spending"
-    currencies.forEach(cur => {
-      const data = currencySpending[cur][m];
-      if (data && (Math.abs(data.paid) > 0.001 || Math.abs(data.share) > 0.001)) {
-        html += `<td>
-          <div class="split-cell-main" style="color:var(--primary);">代付 ${fmt(data.paid)}</div>
-          <div class="split-cell-sub" style="color:var(--red);">分攤 ${fmt(data.share)}</div>
-        </td>`;
-      } else {
-        html += `<td><span class="hint">-</span></td>`;
-      }
-    });
-    html += `</tr>`;
+memberArr.forEach(m => {
+  html += `<tr data-member="${esc(m)}" data-action="spending">
+    <td><div class="member-name-click" data-member="${esc(m)}" data-action="spending">${esc(m)}</div></td>`;
+
+  currencies.forEach(cur => {
+    const data = currencySpending[cur][m];
+    if (data && (Math.abs(data.paid) > 0.001 || Math.abs(data.share) > 0.001)) {
+      html += `<td>
+        <div class="split-cell-main" style="color:var(--primary);">代付 ${fmt(data.paid)}</div>
+        <div class="split-cell-sub" style="color:var(--red);">分攤 ${fmt(data.share)}</div>
+      </td>`;
+    } else {
+      html += `<td><span class="hint">-</span></td>`;
+    }
   });
+
+  html += `</tr>`;
+});
   html += `</tbody></table></div>`;
   $('memberSpendList').innerHTML = html;
 }
